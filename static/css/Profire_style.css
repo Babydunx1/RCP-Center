@@ -1,0 +1,1150 @@
+/* Profire_style.css (Final Fix V4 - Scoped & Layout) */
+
+/* #patient-profile-page เป็น Container หลักของหน้าโปรไฟล์ */
+/* สไตล์ทั้งหมดในไฟล์นี้จะถูกจำกัดขอบเขตให้อยู่ภายใต้ #patient-profile-page เท่านั้น */
+#patient-profile-page {
+    width: 100%;
+    /* max-width: 1140px; */ /* ✅ ลบ max-width ออก เพื่อให้ยืดเต็มพื้นที่ใน main content */
+    margin: 0; /* ✅ ปรับ margin เป็น 0 เพราะ main content มี padding อยู่แล้ว */
+    height: 100%; /* ✅ ทำให้สูง 100% ของ parent (view-profile) */
+    display: flex; /* ✅ ใช้ flexbox เพื่อให้เนื้อหายืดเต็ม */
+    flex-direction: column; /* ✅ จัดเรียงแนวตั้ง */
+}
+
+
+/* สไตล์ใหม่สำหรับกรอบส่วนบน */
+#patient-profile-page .ppp-top-section {
+    background: linear-gradient(to right, #F97316, #FFF7F0);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 24px 32px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0; /* ✅ ไม่ให้หด */
+}
+
+body {
+    font-family: 'Prompt', sans-serif;
+    background-color: #F7F9FC;
+    margin: 0;
+    padding: 20px;
+}
+
+
+
+/* สไตล์ใหม่สำหรับกรอบส่วนบน */
+.ppp-top-section {
+    background: linear-gradient(to right, #F97316, #FFF7F0);
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    padding: 24px 32px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.ppp-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.ppp-title {
+    background-color: #FAF9F6;
+    border: 1px solid #E5E7EB;
+    padding: 6px 16px;
+    border-radius: 50px;
+    color: #1a202c;
+    font-weight: 600;
+    display: inline-block;
+}
+
+.ppp-search-bar {
+    display: flex;
+    align-items: center;
+    background-color: #fff;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 8px 15px;
+    width: 100%;
+    max-width: 300px;
+}
+.ppp-search-bar svg { stroke: #9CA3AF; margin-right: 8px; }
+.ppp-search-bar input { border: none; background: transparent; outline: none; width: 100%; font-family: 'Prompt', sans-serif; font-size: 14px; }
+.ppp-search-bar input::placeholder { color: #9CA3AF; }
+
+.ppp-patient-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    overflow: hidden;
+    flex-grow: 1; /* Make it take available vertical space */
+    display: flex; /* Enable flexbox for its children */
+    flex-direction: column; /* Stack children vertically */
+}
+
+.ppp-card-content {
+    display: flex;
+    gap: 0; 
+    padding: 0; 
+    flex: 1; /* Make it take available vertical space */
+    height: 100%; /* Ensure it takes full height of its parent */
+}
+
+/* ===== Sidebar ด้านซ้าย ===== */
+.ppp-sidebar {
+    flex: 0 0 250px; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px;
+}
+
+.ppp-avatar-container {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    border: 4px solid #ff8c00;
+    padding: 5px;
+    background-color: #fff;
+}
+
+.ppp-avatar {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.ppp-user-info {
+    text-align: center;
+    margin-top: 16px;
+    margin-bottom: 24px;
+}
+
+.ppp-user-info .name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1a202c;
+    margin: 0;
+}
+
+.ppp-user-info .role {
+    font-size: 0.9rem;
+    color: #6B7280;
+}
+
+/*--- Profile Completeness Bar ---*/
+.profile-completeness {
+    width: 100%;
+    margin-bottom: 24px;
+}
+.completeness-text {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+    color: #6B7280;
+    margin-bottom: 8px;
+}
+.completeness-text strong {
+    color: #1a202c;
+    font-weight: 600;
+}
+.progress-bar-bg {
+    width: 100%;
+    height: 8px;
+    background-color: #E5E7EB;
+    border-radius: 4px;
+    overflow: hidden;
+}
+.progress-bar-fill {
+    height: 100%;
+    background-color: #ff8c00; /* สีส้มเดียวกับเมนู */
+    border-radius: 4px;
+    transition: width 0.5s ease-in-out;
+}
+
+.ppp-nav-menu {
+    width: 100%;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.ppp-nav-menu li a {
+    display: flex;
+    align-items: center;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: #555;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    font-weight: 500;
+    transition: all 0.2s ease;
+}
+
+.ppp-nav-menu li a i {
+    width: 20px;
+    margin-right: 12px;
+    text-align: center;
+    color: #9CA3AF;
+}
+
+.ppp-nav-menu li a:hover {
+    background-color: #f3f4f6;
+    color: #111827;
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.ppp-nav-menu li a.active {
+    background-color: #fff0e6;
+    color: #ff8c00;
+    transform: translateX(0);
+    box-shadow: none;
+}
+
+.ppp-nav-menu li a.active i {
+    color: #ff8c00;
+}
+
+/* ===== เนื้อหาหลักด้านขวา ===== */
+.ppp-main-content {
+    flex-grow: 1; 
+    background-color: #FFF7F0; /* พื้นหลังสีครีมตามรูปของ Profile */
+    padding: 32px;
+    border-top-left-radius: 20px; 
+    border-bottom-left-radius: 20px;
+    overflow-y: auto; /* Enable vertical scrolling */
+    max-height: calc(100vh - 200px); /* Adjust this value as needed */
+}
+
+/* Custom Scrollbar Styles */
+.ppp-main-content::-webkit-scrollbar {
+    width: 8px; /* Default width */
+    transition: width 0.3s ease; /* Smooth transition for width change */
+}
+
+.ppp-main-content:hover::-webkit-scrollbar {
+    width: 12px; /* Wider on hover */
+}
+
+.ppp-main-content::-webkit-scrollbar-track {
+    background: #f1f1f1; /* Light grey track */
+    border-radius: 10px;
+}
+
+.ppp-main-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(to bottom, #F97316, #FFD700); /* Orange to Gold gradient */
+    border-radius: 10px;
+    border: 2px solid #f1f1f1; /* Padding around the thumb */
+}
+
+.ppp-main-content::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(to bottom, #EA580C, #FFC107); /* Darker gradient on hover */
+}
+
+.ppp-content-header.ppp-title {
+    font-size: 24px;
+    margin-top: 0;
+    margin-bottom: 24px;
+    background-color: transparent; /* ทำให้ title ใน content ไม่มีพื้นหลัง */
+    border: none; /* ไม่มีเส้นขอบ */
+    padding: 0; /* ไม่มี padding */
+    color: #1a202c; /* สีข้อความปกติ */
+    text-align: left; /* ชิดซ้าย */
+}
+
+.form-row {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #4B5563;
+}
+
+.input-field-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+/* สไตล์สำหรับ input ทั่วไปใน input-field-wrapper (ทั้งหน้า Profile และ Change Password) */
+.input-field-wrapper input, 
+.input-field-wrapper select {
+    padding: 12px 15px; /* <--- Padding ซ้าย-ขวา 15px เป็นค่าเริ่มต้น */
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'Prompt', sans-serif;
+    background-color: #FFFFFF;
+    width: 100%;
+    box-sizing: border-box;
+    outline: none;
+    transition: all 0.2s ease-in-out; /* เพิ่ม transition สำหรับ animation */
+}
+
+
+/* สไตล์ focus สำหรับ input ทั่วไป */
+.input-field-wrapper input:focus, 
+.input-field-wrapper select:focus {
+    border-color: #F97316;
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.3), 0 4px 8px rgba(249, 115, 22, 0.2); /* เพิ่มเงาที่ชัดเจนขึ้น */
+    transform: translateY(-2px); /* ทำให้เด้งขึ้นเล็กน้อย */
+}
+
+/* สไตล์เมื่อนำเมาส์ไปชี้ (hover) ที่ input field (สำหรับ Change Password โดยเฉพาะ) */
+.change-password-form-wrapper .input-field-wrapper input:hover {
+    border-color: #F97316; /* เปลี่ยนสีขอบเป็นส้ม */
+    box-shadow: 0 2px 5px rgba(249, 115, 22, 0.1); /* เพิ่มเงาเล็กน้อย */
+    transform: translateY(-1px); /* ทำให้เด้งขึ้นเล็กน้อย */
+}
+
+
+/* สไตล์ไอคอนด้านขวา (เช่น show/hide password หรือไอคอนเดิมในหน้า Profile) */
+.input-field-wrapper i {
+    position: absolute;
+    right: 12px;
+    top: 50%; /* จัดกึ่งกลางแนวตั้ง */
+    transform: translateY(-50%); /* จัดกึ่งกลางแนวตั้ง */
+    color: #9CA3AF;
+    pointer-events: none; /* โดย default ไม่ให้คลิกได้ */
+    transition: color 0.2s ease;
+}
+
+.input-field-wrapper input:focus + i { 
+    color: #F97316; 
+}
+
+/* สไตล์สำหรับ Suffix Icon (ไอคอนด้านขวา) - ใช้สำหรับไอคอนในหน้าข้อมูลส่วนตัว (หลัง Input) */
+.input-field-wrapper .suffix-icon {
+    position: absolute;
+    right: 12px; 
+    top: 50%; 
+    transform: translateY(-50%); 
+    color: #9CA3AF;
+    pointer-events: none; 
+    font-size: 16px; 
+    z-index: 1; 
+}
+
+
+/* สไตล์สำหรับ Prefix Icon (ไอคอนด้านซ้าย) - ใช้สำหรับไอคอนในหน้า Reset Password (หน้า Input) */
+.input-field-wrapper .prefix-icon {
+    position: absolute;
+    left: 12px; /* <--- ตำแหน่งด้านซ้าย */
+    top: 50%; 
+    transform: translateY(-50%); 
+    color: #9CA3AF;
+    pointer-events: none; 
+    font-size: 16px; 
+    z-index: 1; 
+}
+
+
+.form-actions {
+    margin-top: 30px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.btn {
+    padding: 12px 24px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-secondary {
+    background-color: #fff;
+    color: #374151;
+    border: 1px solid #D1D5DB;
+}
+
+.btn-secondary:hover {
+    background-color: #F9FAFB;
+    border-color: #A0AEC0; 
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05); 
+    transform: translateY(-1px); 
+}
+
+.btn-primary {
+    background-color: #F97316;
+    color: white;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.btn-primary:hover {
+    background-color: #EA580C;
+    box-shadow: 0 6px 10px -1px rgba(0, 0, 0, 0.15), 0 3px 6px -1px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+.radio-group-container {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding-top: 8px;
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #374151;
+}
+
+.radio-label input[type="radio"] {
+    -webkit-appearance: none;
+    appearance: none;
+    background-color: #fff;
+    margin: 0;
+    font: inherit;
+    color: currentColor;
+    width: 1.15em;
+    height: 1.15em;
+    border: 2px solid #D1D5DB;
+    border-radius: 50%;
+    transform: translateY(-0.075em);
+    display: grid;
+    place-content: center;
+    margin-right: 8px;
+}
+
+.radio-label input[type="radio"]::before {
+    content: "";
+    width: 0.65em;
+    height: 0.65em;
+    border-radius: 50%;
+    transform: scale(0);
+    transition: 120ms transform ease-in-out;
+    box-shadow: inset 1em 1em #F97316;
+}
+
+.radio-label input[type="radio"]:checked {
+    border-color: #F97316;
+}
+
+.radio-label input[type="radio"]:checked::before {
+    transform: scale(1);
+}
+
+/* สไตล์สำหรับ Tab Content */
+.ppp-tab-content {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* ======================================= */
+/* สไตล์ใหม่สำหรับ Change Password Form */
+/* ======================================= */
+
+.change-password-form-wrapper {
+    width: 100%;
+    max-width: 380px;
+    margin: 30px auto 0 auto;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.change-password-form-wrapper .form-group {
+    margin-bottom: 20px;
+}
+
+.change-password-form-wrapper .form-group label {
+    display: block;
+    font-weight: 500;
+    margin-bottom: 8px;
+    color: #4B5563;
+    font-size: 14px;
+}
+
+/* ปรับ padding-left และ padding-right ของ input ใน Change Password Form */
+.change-password-form-wrapper .input-field-wrapper input {
+    padding-left: 35px; /* มีที่ว่างสำหรับ Prefix Icon ด้านซ้าย */
+    padding-right: 35px; /* มีที่ว่างสำหรับ Toggle Icon ด้านขวา */
+}
+
+/* ปรับไอคอน Show/Hide Password ให้คลิกได้ */
+.change-password-form-wrapper .input-field-wrapper i.toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%; 
+    transform: translateY(-50%); 
+    color: #9CA3AF;
+    cursor: pointer; 
+    font-size: 16px;
+    pointer-events: auto; 
+}
+
+.change-password-form-wrapper .input-field-wrapper i.toggle-password:hover {
+    color: #F97316;
+}
+
+/* สไตล์สำหรับ Password Strength Indicator */
+.password-strength-indicator {
+    margin-top: 10px;
+    font-size: 12px;
+}
+
+.strength-bar-bg {
+    width: 100%;
+    height: 6px; 
+    background-color: #E5E7EB; 
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.strength-bar-fill {
+    height: 100%;
+    width: 0%; 
+    background-color: #dc3545; 
+    border-radius: 3px;
+    transition: width 0.3s ease-in-out, background-color 0.3s ease-in-out;
+}
+
+.strength-text {
+    text-align: right;
+    color: #888;
+    margin-bottom: 10px;
+    font-weight: 500;
+}
+
+/* Password Requirements List */
+.password-requirements {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.password-requirements .requirement {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+    color: #888;
+}
+
+.password-requirements .requirement i {
+    margin-right: 8px;
+    color: #ccc;
+    font-size: 14px;
+}
+
+/* สไตล์เมื่อ Requirement ผ่าน */
+.password-requirements .requirement.valid {
+    color: #28a745;
+}
+
+.password-requirements .requirement.valid i {
+    color: #28a745;
+}
+
+/* สไตล์สำหรับข้อความยืนยันรหัสผ่าน */
+.match-message {
+    font-size: 12px;
+    margin-top: 5px;
+    color: #dc3545;
+    padding-left: 5px;
+}
+.match-message.valid {
+    color: #28a745;
+}
+
+/* Update Password Button */
+.update-password-button {
+    width: 100%;
+    padding: 15px;
+    background-color: #F97316;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.update-password-button:hover {
+    background-color: #EA580C;
+    box-shadow: 0 6px 10px -1px rgba(0, 0, 0, 0.15), 0 3px 6px -1px rgba(0, 0, 0, 0.08);
+    transform: translateY(-1px);
+}
+
+/* Form Status Message (Success/Error) */
+.form-status-message {
+    margin-top: 15px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 14px;
+    text-align: center;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.form-status-message.show {
+    opacity: 1;
+    display: flex;
+}
+
+.form-status-message.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.form-status-message.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+/* สไตล์ไอคอนในข้อความสถานะ */
+.form-status-message i {
+    font-size: 16px;
+}
+
+/* ======================================= */
+/* สไตล์สำหรับ Log Out Content */
+/* ======================================= */
+#log-out-content {
+    position: fixed; /* Use fixed to ensure it covers the whole viewport */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex; /* Make it a flex container */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    background-color: #F7F9FC; /* Match body background, or add a slight overlay */
+    z-index: 9998; /* Ensure it's above app-container but below modals */
+    /* Initial state is display: none; handled by JS */
+}
+
+.log-out-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    /* height: 100%; */ /* Remove this, as parent is now handling centering */
+    text-align: center;
+    padding: 40px 20px;
+}
+
+.log-out-icon {
+    font-size: 60px;
+    color: #28a745; /* สีเขียวสำหรับสำเร็จ */
+    margin-bottom: 20px;
+    animation: bounceIn 0.8s ease-out;
+}
+
+.log-out-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 15px;
+}
+
+.log-out-message {
+    font-size: 16px;
+    color: #6B7280;
+    margin-bottom: 30px;
+    line-height: 1.6;
+    max-width: 400px; /* จำกัดความกว้างของข้อความ */
+}
+
+.log-in-again-btn {
+    padding: 14px 30px;
+    font-size: 16px;
+    border-radius: 10px;
+}
+
+/* Animation สำหรับไอคอน Log Out */
+@keyframes bounceIn {
+    0% {
+        transform: scale(0.1);
+        opacity: 0;
+    }
+    60% {
+        transform: scale(1.1);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+/* ======================================= */
+/* สไตล์สำหรับ Log Out Confirmation Pop-up */
+/* ======================================= */
+.logout-modal-overlay {
+    position: fixed; /* ให้อยู่บนสุดของหน้าจอ */
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* พื้นหลังทึบแสง */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* ให้ Pop-up อยู่ด้านบนสุด */
+    opacity: 0; /* ซ่อนเริ่มต้น */
+    visibility: hidden; /* ซ่อนเริ่มต้น */
+    transition: opacity 0.3s ease-in-out, visibility 0.3s ease-in-out;
+}
+
+.logout-modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.logout-modal-content {
+    background-color: #ffffff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    text-align: center;
+    max-width: 400px;
+    width: 90%;
+    transform: translateY(-20px); /* เริ่มต้นลอยขึ้นเล็กน้อย */
+    transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+}
+
+.logout-modal-overlay.show .logout-modal-content {
+    transform: translateY(0); /* เด้งลงมาเมื่อแสดง */
+    opacity: 1;
+}
+
+.logout-modal-title {
+    font-size: 24px;
+    font-weight: 600;
+    color: #1a202c;
+    margin-bottom: 15px;
+}
+
+.logout-modal-message {
+    font-size: 16px;
+    color: #4B5563;
+    margin-bottom: 25px;
+    line-height: 1.5;
+}
+
+.logout-modal-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+}
+
+/* ใช้ปุ่มสไตล์เดิมของเรา */
+.logout-modal-buttons .btn-primary {
+    background-color: #F97316; /* สีส้ม */
+}
+
+.logout-modal-buttons .btn-secondary {
+    background-color: #fff; /* สีขาว */
+    color: #374151;
+    border: 1px solid #D1D5DB;
+}
+
+.logout-modal-buttons .btn-primary:hover {
+    background-color: #EA580C;
+}
+
+.logout-modal-buttons .btn-secondary:hover {
+    background-color: #F9FAFB;
+    border-color: #A0AEC0;
+}
+
+/* ======================================= */
+/* สไตล์ใหม่สำหรับ Privacy Settings */
+/* ======================================= */
+.privacy-settings-wrapper {
+    padding: 20px 0;
+}
+
+.privacy-section {
+    margin-bottom: 30px;
+    border-bottom: 1px solid #E5E7EB; /* เส้นแบ่งส่วน */
+    padding-bottom: 20px;
+}
+
+.privacy-section:last-child {
+    border-bottom: none; /* ไม่มีเส้นแบ่งส่วนสุดท้าย */
+    margin-bottom: 0;
+}
+
+.privacy-section h3 {
+    font-size: 20px;
+    color: #1a202c;
+    margin-bottom: 15px;
+    font-weight: 600;
+}
+
+.privacy-section .section-description {
+    font-size: 14px;
+    color: #6B7280;
+    margin-bottom: 25px;
+    line-height: 1.5;
+}
+
+.setting-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: #ffffff;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    padding: 15px 20px;
+    margin-bottom: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.03);
+}
+
+.setting-item:last-child {
+    margin-bottom: 0;
+}
+
+.setting-info {
+    flex-grow: 1;
+    padding-right: 15px; /* เว้นระยะห่างจาก toggle */
+}
+
+.setting-info h4 {
+    font-size: 16px;
+    color: #1a202c;
+    margin: 0 0 5px 0;
+    font-weight: 500;
+}
+
+.setting-info p {
+    font-size: 13px;
+    color: #6B7280;
+    margin: 0;
+    line-height: 1.4;
+}
+
+/* Toggle Switch Styles */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 48px; /* ความกว้างของ switch */
+    height: 28px; /* ความสูงของ switch */
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc; /* สีพื้นหลังเมื่อปิด */
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 20px; /* ขนาดวงกลม */
+    width: 20px; /* ขนาดวงกลม */
+    left: 4px; /* ตำแหน่งวงกลมเมื่อปิด */
+    bottom: 4px; /* ตำแหน่งวงกลมเมื่อปิด */
+    background-color: white;
+    -webkit-transition: .4s;
+    transition: .4s;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+input:checked + .slider {
+    background-color: #F97316; /* สีพื้นหลังเมื่อเปิด (สีส้ม) */
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px #F97316;
+}
+
+input:checked + .slider:before {
+    -webkit-transform: translateX(20px); /* เลื่อนวงกลมไปทางขวาเมื่อเปิด */
+    -ms-transform: translateX(20px);
+    transform: translateX(20px);
+}
+
+/* Rounded sliders */
+.slider.round {
+    border-radius: 28px; /* ทำให้มุมมน */
+}
+
+.slider.round:before {
+    border-radius: 50%; /* ทำให้วงกลม */
+}
+
+/* Adjust form actions for privacy page */
+.privacy-actions {
+    justify-content: flex-end; /* ชิดขวา */
+    margin-top: 30px;
+}
+
+/* ======================================= */
+/* สไตล์สำหรับ Usage History */
+/* ======================================= */
+.usage-history-wrapper {
+    /* คุณอาจจะต้องการกำหนด max-width หรือ padding เพิ่มเติมตามความเหมาะสม */
+}
+
+.history-controls {
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: flex-end; /* จัดช่องค้นหาไปทางขวา */
+}
+
+.history-search-input {
+    width: 100%;
+    max-width: 300px; /* จำกัดความกว้างเหมือน Search Bar ด้านบน */
+    padding: 10px 15px;
+    border: 1px solid #E5E7EB;
+    border-radius: 8px;
+    font-size: 14px;
+    font-family: 'Prompt', sans-serif;
+    background-color: #FFFFFF;
+    outline: none;
+    transition: all 0.2s ease-in-out;
+}
+
+.history-search-input:focus {
+    border-color: #F97316;
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.3);
+}
+
+.history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px; /* ระยะห่างระหว่างแต่ละรายการ */
+}
+
+.history-item {
+    background-color: #ffffff; /* พื้นหลังสีขาว */
+    border: 1px solid #E5E7EB; /* เส้นขอบอ่อนๆ */
+    border-radius: 12px; /* มุมมน */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05); /* เงาเล็กน้อย */
+    padding: 15px 20px;
+    display: flex; /* จัดเรียงไอคอนและรายละเอียด */
+    align-items: flex-start; /* จัดแนวตั้งให้ชิดบน */
+    gap: 15px; /* ระยะห่างระหว่างไอคอนและข้อความ */
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* สำหรับ hover */
+}
+
+.history-item:hover {
+    transform: translateY(-3px); /* เด้งขึ้นเล็กน้อยเมื่อ hover */
+    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.1); /* เงาเข้มขึ้น */
+}
+
+.item-icon {
+    flex-shrink: 0; /* ไม่ให้ icon หด */
+    width: 40px; /* กำหนดขนาดวงกลม icon */
+    height: 40px;
+    background-color: #FFF7F0; /* พื้นหลังวงกลม icon (สีครีมอ่อนๆ) */
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 18px;
+    color: #F97316; /* สี icon (สีส้ม) */
+}
+
+.item-details {
+    flex-grow: 1; /* ให้รายละเอียดขยายเต็มพื้นที่ */
+}
+
+.item-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.item-type {
+    font-weight: 600;
+    color: #1a202c;
+    font-size: 16px;
+}
+
+.item-timestamp {
+    font-size: 12px;
+    color: #9CA3AF;
+}
+
+.item-description {
+    font-size: 14px;
+    color: #4B5563;
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* ======================================= */
+/* NEW: Profile Picture Modal Styles */
+/* ======================================= */
+.modal {
+    display: none; /* Hidden by default */
+    position: fixed; /* Stay in place */
+    z-index: 1001; /* Sit on top */
+    left: 0;
+    top: 0;
+    width: 100%; /* Full width */
+    height: 100%; /* Full height */
+    overflow: auto; /* Enable scroll if needed */
+    background-color: rgba(0,0,0,0.6); /* Black w/ opacity */
+    justify-content: center;
+    align-items: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: auto;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    width: 90%;
+    max-width: 700px;
+    position: relative;
+    animation: fadeInScale 0.3s ease-out;
+}
+
+@keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.9); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+.modal-content h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 25px;
+    font-size: 24px;
+    font-weight: 600;
+}
+
+.close-button {
+    color: #aaa;
+    position: absolute;
+    top: 15px;
+    right: 25px;
+    font-size: 32px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.close-button:hover,
+.close-button:focus {
+    color: #F97316;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.profile-pic-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 15px;
+    max-height: 400px; /* Limit height and add scroll */
+    overflow-y: auto;
+    padding: 10px;
+    border: 1px solid #eee;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    background-color: #f9f9f9;
+}
+
+.profile-pic-item {
+    cursor: pointer;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.2s ease;
+    position: relative;
+    padding: 5px; /* Inner padding for the border effect */
+}
+
+.profile-pic-item img {
+    width: 100%;
+    height: 100px; /* Fixed height for consistency */
+    object-fit: cover;
+    border-radius: 5px;
+    display: block;
+}
+
+.profile-pic-item:hover {
+    border-color: #FFD700; /* Gold on hover */
+    box-shadow: 0 0 10px rgba(255,215,0,0.5);
+    transform: scale(1.05);
+}
+
+.profile-pic-item.selected {
+    border-color: #F97316; /* Orange when selected */
+    box-shadow: 0 0 15px rgba(249,115,22,0.7);
+    transform: scale(1.08);
+}
+
+.profile-pic-item.selected::after {
+    content: '\f00c'; /* FontAwesome check icon */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    color: #F97316;
+    background-color: rgba(255,255,255,0.8);
+    border-radius: 50%;
+    padding: 3px;
+    font-size: 18px;
+}
+
+.modal-content .btn-primary {
+    width: 100%;
+    padding: 12px 20px;
+    font-size: 16px;
+}
+
+.loading-state, .error-state {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    font-size: 16px;
+}
+
+.error-state {
+    color: #dc3545;
+}

@@ -1,0 +1,5 @@
+# ใส่ชื่อไฟล์ที่อยากยกเว้น (credentials.json กับ user_token.json)
+Add-Content .gitignore "credentials.json"
+Add-Content .gitignore "user_token.json"
+credentials.json
+user_token.json

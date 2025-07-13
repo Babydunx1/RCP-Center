@@ -1,0 +1,410 @@
+/* ใช้ .login-page เฉยๆ เพื่อให้ CSS ทำงานกับ div.login-page ได้ทุกที่ */
+.login-page {
+    font-family: 'Prompt', sans-serif;
+    background: linear-gradient(180deg, #eeeeee 0%, #0e0e0e 100%);
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Background Pattern Styles (พื้นหลังใหญ่ด้านนอก) */
+.login-page .login-page-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1; 
+    
+    
+    /* หากต้องการใช้ภาพพื้นหลัง ให้ใส่ URL ของภาพที่คุณอัปโหลดเองที่นี่ */
+    /* background-image: url('YOUR_IMAGE_URL_FROM_IMGUR_OR_OTHER_HOSTING_SERVICE'); */ 
+    background-size: cover; 
+    background-position: center; 
+    background-repeat: no-repeat; 
+    background-blend-mode: normal; /* หรือ soft-light ถ้าคุณชอบความนุ่มนวล */
+    opacity: 0.2; /* เริ่มต้นด้วยค่าต่ำๆ เพื่อให้ดูเป็นลายน้ำจางๆ ในพื้นหลังดำเทา */
+}
+
+
+/* Login Container (กรอบขาวตรงกลาง) */
+.login-page .login-container {
+    background-color: rgba(255, 255, 255, 0.1); /* ปรับให้เป็นเทาโปร่งแสง */
+    backdrop-filter: blur(15px); 
+    -webkit-backdrop-filter: blur(15px); 
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(255, 129, 45, 0.3); /* เงาจะเข้มขึ้น */
+    padding: 40px 40px 30px; 
+    width: 100%;
+    max-width: 420px;
+    text-align: center;
+    box-sizing: border-box;
+    border: 1px solid rgba(255, 255, 255, 0.05); /* ขอบจางๆ */
+    display: flex; 
+    flex-direction: column; 
+    align-items: center; 
+    margin-top: 0px; 
+
+    background-image: none; /* ลบพื้นหลังเดิมออก */
+}
+
+
+/* Avatar Styles (ล็อกโครงสร้างและตำแหน่ง) */
+.login-page .login-avatar-container {
+    width: 100px; 
+    height: 100px;
+    border-radius: 50%;
+    border: 4px solid #F97316; /* สามารถเปลี่ยนสีนี้ให้เข้ากับโทนดำเทาได้ */
+    padding: 5px; 
+    background-color: #fff; /* พื้นหลังวงกลม Avatar */
+    margin-top: -70px; 
+    margin-bottom: 10px; 
+    box-shadow: 0 5px 15px rgba(255, 153, 0, 0.1);
+    flex-shrink: 3; 
+    
+    display: flex; 
+    justify-content: center;
+    align-items: flex-end; 
+    overflow: hidden; 
+}
+
+.login-page .login-avatar-icon { 
+    font-size: 6.0em; 
+    background: linear-gradient(135deg, #ff9100, #000000); /* เปลี่ยนสี icon ให้เป็นเทาอ่อนไล่ระดับ */
+    -webkit-background-clip: text; 
+    -webkit-text-fill-color: transparent; 
+    background-clip: text; 
+    color: transparent; 
+    transform: translateY(15%); 
+}
+
+.login-page .login-title {
+    font-size: 2.2em;
+    color: #ffffff; /* เปลี่ยนเป็นสีเทาอ่อน */
+    margin-bottom: 20px;
+    font-weight: 700;
+}
+
+.login-page .login-subtitle {
+    font-size: 1em;
+    color: #ffffff; /* เปลี่ยนเป็นสีเทาอ่อนลง */
+    margin-bottom: 30px;
+}
+
+/* Form Group */
+.login-page .form-group {
+    margin-bottom: 25px; 
+    text-align: left;
+    width: 100%;
+}
+
+.login-page .form-group label {
+    display: block;
+    font-size: 0.9em;
+    color: #ffffff; /* เปลี่ยนเป็นสีเทาอ่อนลง */
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.login-page .input-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.login-page .input-wrapper input {
+    width: 100%;
+    padding: 14px 15px;
+    padding-left: 45px;
+    padding-right: 15px;
+    border: 1px solid #444444; /* เปลี่ยนขอบเป็นเทาเข้ม */
+    border-radius: 10px;
+    font-size: 1em;
+    font-family: 'Prompt', sans-serif;
+    background-color: #2D2D2D; /* พื้นหลัง Input เป็นเทาเข้ม */
+    outline: none;
+    box-sizing: border-box;
+    transition: all 0.2s ease-in-out;
+    color: #696969; /* สีข้อความใน Input เป็นสีขาว */
+}
+
+.login-page .input-wrapper input::placeholder {
+    color: #777777; /* สี placeholder */
+}
+
+.login-page .input-wrapper input:focus {
+    border-color: #F97316; /* คงสีส้มเมื่อ focus ไว้ก่อน หรือเปลี่ยนเป็นสีที่เข้ากับโทนใหม่ */
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2); 
+}
+
+/* Input Error State */
+.login-page .input-wrapper input.error {
+    border-color: #dc3545; 
+    box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.2);
+}
+
+/* Error Message below input */
+.login-page .error-message {
+    font-size: 0.8em;
+    color: #dc3545; 
+    margin-top: 5px;
+    text-align: left;
+    padding-left: 5px; 
+}
+
+
+/* Icon Styles */
+.login-page .input-wrapper .prefix-icon {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #ffffff; /* สี Icon เป็นเทาอ่อน */
+    font-size: 1.1em;
+    pointer-events: none;
+}
+
+/* Options Row (Remember Me & Forgot Password) */
+.login-page .options-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 15px; 
+    margin-bottom: 25px; 
+    font-size: 0.9em;
+    color: #ffffff; /* เปลี่ยนเป็นเทาอ่อน */
+    width: 100%;
+}
+
+.login-page .remember-me {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+/* Custom Checkbox Styling */
+.login-page .remember-me input[type="checkbox"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 0;
+    height: 0;
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.login-page .custom-checkbox {
+    display: inline-block;
+    width: 18px;
+    height: 18px;
+    border: 2px solid #777777; /* ขอบ checkbox เป็นเทาเข้ม */
+    border-radius: 4px;
+    background-color: #2D2D2D; /* พื้นหลัง checkbox เป็นเทาเข้ม */
+    margin-right: 8px;
+    position: relative;
+    top: 2px; 
+    transition: all 0.2s ease;
+}
+
+.login-page .custom-checkbox::after {
+    content: "\f00c"; 
+    font-family: "Font Awesome 6 Free";
+    font-weight: 900;
+    color: #ffffff; /* สีเครื่องหมายถูกเป็นสีขาว */
+    font-size: 12px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0); 
+    transition: transform 0.2s ease;
+}
+
+.login-page .remember-me input[type="checkbox"]:checked + .custom-checkbox {
+    background-color: #ffad72; /* คงสีส้มไว้ก่อน */
+    border-color: #ffad72;
+}
+
+.login-page .remember-me input[type="checkbox"]:focus + .custom-checkbox {
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2); /* คงเงาสีส้มไว้ */
+}
+
+.login-page .remember-me input[type="checkbox"]:checked + .custom-checkbox::after {
+    transform: translate(-50%, -50%) scale(1); 
+}
+
+
+.login-page .forgot-password {
+    color: #ffad72; /* คงสีส้มไว้ หรือจะเปลี่ยนเป็นสีที่เข้ากับโทนใหม่ เช่น #FFD700 (ทอง) หรือ #00FFFF (ฟ้าอ่อน) */
+    text-decoration: none;
+    transition: text-decoration 0.2s ease;
+}
+
+.login-page .forgot-password:hover {
+    text-decoration: underline;
+}
+
+/* Status container for email submission */
+.login-page .email-status-container {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px; 
+    margin-bottom: 15px; 
+}
+
+.login-page .email-status-message {
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    text-align: center;
+    font-weight: 500;
+    background-color: #28a74533; /* เขียวอมเทาโปร่งแสง */
+    color: #28a745; /* เขียว */
+    border: 1px solid #28a74555;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.login-page .email-status-message.error {
+    background-color: #dc354533; /* แดงอมเทาโปร่งแสง */
+    color: #dc3545; /* แดง */
+    border: 1px solid #dc354555;
+}
+
+.login-page .resend-link-button {
+    padding: 8px 15px;
+    background-color: #4CAF50; /* เขียว */
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.login-page .resend-link-button:hover {
+    background-color: #45a049;
+}
+.login-page .resend-link-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+
+/* Login Button */
+.login-page .login-button {
+    width: 100%;
+    padding: 15px;
+    background-color: #F97316; /* คงสีส้มไว้ก่อน เพื่อความโดดเด่น */
+    color: #ffffff;
+    border: none;
+    border-radius: 10px;
+    font-size: 1.1em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+    box-shadow: 0 4px 15px rgba(249, 115, 22, 0.3);
+    margin-top: 15px; 
+}
+
+.login-page .login-button:hover {
+    background-color: #EA580C; /* สีส้มเข้มขึ้นเมื่อ hover */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(249, 115, 22, 0.4);
+}
+
+.login-page .login-button:disabled {
+    background-color: #ccc;
+    cursor: not-allowed;
+    box-shadow: none;
+    transform: translateY(0);
+}
+
+/* REMOVED: Divider and Social Login Buttons styles */
+
+
+/* Sign Up Text */
+.login-page .signup-text {
+    margin-top: 30px; 
+    font-size: 0.9em;
+    color: #ffffff; /* เปลี่ยนเป็นเทาอ่อน */
+}
+
+.login-page .signup-link {
+    color: #F97316; /* คงสีส้มไว้ */
+    text-decoration: none;
+    font-weight: 600;
+    transition: text-decoration 0.2s ease;
+}
+
+.login-page .signup-link:hover {
+    text-decoration: underline;
+}
+
+/* Credit Text (ล็อกข้อความนี้ไว้ - ไม่มีการเปลี่ยนแปลงข้อความ) */
+.login-page .credit-text {
+    margin-top: 30px; 
+    font-size: 0.75em;
+    color: #ffffff; /* เปลี่ยนเป็นสีเทาที่อ่านง่ายในพื้นหลังเข้ม */
+}
+
+/* General Login Status Message */
+.login-page .login-status-message {
+    margin-top: 15px;
+    padding: 10px 15px;
+    border-radius: 8px;
+    font-size: 0.9em;
+    text-align: center;
+    font-weight: 500;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background-color: rgba(45, 45, 45, 0.9); /* เทาเข้มโปร่งแสง */
+    color: #E0E0E0; /* เทาอ่อน */
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.login-page .login-status-message.show {
+    opacity: 1;
+    display: flex;
+}
+
+.login-page .login-status-message.success {
+    background-color: #28a74533; /* เขียวอมเทาโปร่งแสง */
+    color: #28a745; /* เขียว */
+    border: 1px solid #28a74555;
+}
+
+.login-page .login-status-message.error {
+    background-color: #dc354533; /* แดงอมเทาโปร่งแสง */
+    color: #dc3545; /* แดง */
+    border: 1px solid #dc354555;
+}
+.login-page .login-status-message i {
+    font-size: 1.1em;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .login-page .login-container {
+        margin: 20px;
+        padding: 30px;
+    }
+    .login-page .login-avatar-container {
+        margin-top: -50px; 
+    }
+    .login-page .login-avatar-icon {
+        font-size: 5.5em; 
+        transform: translateY(10%);
+    }
+}
