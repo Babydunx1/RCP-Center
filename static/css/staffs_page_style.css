@@ -1,0 +1,722 @@
+/* Reset and basic setup */
+@import url("https://cdnjs.cloudflare.com/ajax/libs/meyer-reset/2.0/reset.min.css");
+
+* {
+  box-sizing: border-box;
+}
+
+/* ✅ ให้ scroll แนวนอนได้เมื่อจอเล็ก */
+.staffs-table-wrapper {
+  overflow-x: auto;
+  width: 100%;
+}
+
+/* ✅ กำหนดความกว้างขั้นต่ำให้ layout คงที่ */
+.staffs-table-header,
+.staffs-table-body,
+.staffs-table-footer {
+  min-width: 1180px;
+}
+
+
+
+/* Define variables for colors and fonts from Figma */
+:root {
+  --background-grey: #F7F7F7;
+  --text-light: #f7f7f7;
+  --text-dark: #000000;
+  --text-grey: #6b7280;
+  --status-active-bg: #ECFDF5; /* Green-50 */
+  --status-active-text: #065F46; /* Green-800 */
+  --status-inactive-bg: #FEF2F2; /* Red-50 */
+  --status-inactive-text: #991B1B; /* Red-800 */
+  --header-gradient: linear-gradient(90deg, rgba(0, 0, 0, 1) 0%, rgba(93, 93, 93, 1) 52%, rgba(0, 0, 0, 1) 100%);
+  --search-gradient: linear-gradient(90deg, rgba(3, 3, 3, 1) 0%, rgba(100, 100, 100, 1) 100%);
+}
+
+/* Main container for the Staffs view */
+.staffs-container {
+  width: 100%; 
+  max-width: 1865px;   /* ✅ ใหญ่สุดตอนเต็มจอที่ยังดูดี */ 
+  min-width: 1653px;   /* ✅ เล็กสุดแบบไม่พัง */
+  margin: 0 auto;      /* ✅ ให้อยู่ตรงกลางเสมอ */
+  position: absolute;    /* หรือ fixed ก็ได้ ขึ้นกับ layout */
+  top: 0; left: 0;
+  right: 0; bottom: 0;
+  padding: 20px;         /* ระวังอย่าให้เกินขอบ จัดตามต้องการ */
+  background-color: var(--background-grey);
+}
+
+/* Top Bar: Search, User Profile, Dark Mode Toggle */
+.staffs-top-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px 25px; /* Padding inside the top bar */
+  background: var(--background-grey); /* Match overall background */
+  border-radius: 15px; /* Slightly rounded corners */
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+}
+
+.search-section {
+  flex-grow: 1;
+  display: flex;
+  justify-content: flex-start; /* Align search to the left */
+}
+
+.search-input-wrapper {
+  position: relative;
+  width: 350px; /* Fixed width for search bar as per Figma */
+  height: 50px; /* Fixed height */
+  background: var(--search-gradient);
+  border-radius: 63px; /* Pill shape */
+  display: flex;
+  align-items: center;
+  padding: 0 15px;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Subtle shadow */
+}
+
+.search-icon-svg {
+  width: 30px;
+  height: 30px;
+  margin-right: 10px;
+  filter: brightness(0) invert(1); /* Make SVG white */
+}
+
+.search-input {
+  flex-grow: 1;
+  background-color: #ffffff; /* White background for input area */
+  border: none;
+  border-radius: 63px; /* Match wrapper's border-radius */
+  padding: 8px 15px;
+  font-size: 16px;
+  color: var(--text-dark);
+  outline: none;
+}
+
+.user-profile-section {
+  display: flex;
+  align-items: center;
+  gap: 20px; /* Space between elements */
+}
+
+.dark-mode-toggle {
+  width: 40px;
+  height: 40px;
+  cursor: pointer;
+  object-fit: contain;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end; /* Align text to the right */
+}
+
+.user-name {
+  font-weight: 700;
+  color: var(--text-dark); /* Changed to dark for visibility on light background */
+  font-size: 14px;
+}
+
+.user-role {
+  font-weight: 500;
+  color: var(--text-grey); /* Gray color */
+  font-size: 12px;
+}
+
+.user-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* Main Content Area (Table and Footer) */
+.staffs-main-content {
+  overflow-x: auto;         /* ✅ อนุญาตให้ scroll ด้านข้าง */
+  min-width: 1668px;        /* ✅ ป้องกันการบีบแน่นเกินไป */
+  max-width: none;         /* ✅ แก้จากค่าจำกัดเดิม */
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  background-color: #fff;
+  border-radius: 30px;  
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.10); /* เงาฟุ้ง ๆ เบา ๆ */
+  overflow: hidden;   
+  transition: box-shadow 0.3s ease;
+  height: calc(100vh - 150px); /* กำหนดความสูงให้ main content เพื่อให้ table body มีพื้นที่ scroll */
+}
+
+.view-staffs {
+  min-width: 1668px;
+}
+
+.staffs-table-footer {
+  border-radius: 0 0 30px 30px;
+}
+
+/* Table Header */
+.staffs-table-header {
+  display: grid;
+
+  /* ✅ เพิ่มคอลัมน์ Staff ID ต่อจาก # */
+  grid-template-columns: 60px 1fr 1.5fr 1.5fr 1fr 1.5fr 1fr 1fr 80px;
+
+  background: var(--header-gradient);
+  padding: 15px 20px;
+  border-radius: 30px 30px 0 0;
+  color: var(--text-light);
+  font-weight: 600;
+  font-size: 14px;
+  text-align: center;
+  white-space: nowrap;         /* ✅ ป้องกันขึ้นบรรทัดใหม่ */
+}
+
+/* 1) ซ่อน avatar ในแต่ละแถว (ไม่กระทบ avatar ด้านบนขวา) */
+.staffs-table-body .staff-avatar {
+  display: none;
+}
+/* 2) เลื่อนชื่อนั่ง (name-cell) ให้ชิดซ้าย ปรับ padding ให้พอดี */
+.staffs-table-body .name-cell {
+  justify-content: flex-start;
+  padding-left: 12px;  /* ปรับได้ตามชอบ */
+  gap: 0;              /* ไม่มีช่องว่างจาก avatar ที่หายไป */
+}
+
+.header-column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px; /* Space between icon and text */
+}
+
+.header-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+  filter: brightness(0) invert(1); /* Make SVG white */
+}
+
+/* Table Body */
+.staffs-table-body {
+  flex-grow: 1;
+  overflow-y: auto; /* Enable scrolling for table rows */
+  padding: 0 20px; /* Padding for table content */
+  height: 100%; /* ให้ table body ใช้ความสูงเต็มที่ของ parent */
+}
+
+.staff-data-row {
+  display: grid;
+  grid-template-columns: 60px 1.5fr 1.5fr 1fr 1.5fr 1fr 1fr 80px; /* Match header columns */
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0; /* Light separator */
+  font-size: 14px;
+  color: var(--text-dark);
+}
+
+.staff-data-row:last-child {
+  border-bottom: none; /* No border for the last row */
+}
+
+.staff-data-row:hover {
+  background-color: #f9f9f9; /* Subtle hover effect */
+}
+
+.cell {
+  display: flex;
+  align-items: center;
+  justify-content: center; /* Center content in cells by default */
+  padding: 5px;
+}
+
+.name-cell {
+  justify-content: flex-start; /* Align name to the left */
+  gap: 10px;
+}
+
+.staff-avatar {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.status-cell {
+  font-weight: 600;
+}
+
+.status-pill {
+  white-space: nowrap;         /* ป้องกันขึ้นบรรทัดใหม่ */
+  overflow: hidden;            /* ซ่อนเกินขนาด */
+  text-overflow: ellipsis;     /* ใส่ ... ถ้ายาวเกิน */
+  display: inline-flex;        /* จัดให้ icon + text ชิดกันแนวเดียว */
+  align-items: center;         /* ชิดกลางแนวตั้ง */
+  gap: 6px;                    /* ระยะห่าง icon กับ text */
+  padding: 6px 10px;
+  border-radius: 20px;
+  background-color: #e6f8ec;
+  color: #28a745;
+  font-weight: 500;
+  font-size: 13px;
+  max-width: 100%;
+}
+
+.status-pill i,
+.status-pill span {
+  display: inline-block;
+  white-space: nowrap;
+}
+
+
+.status-pill.active {
+  color: var(--status-active-text);
+  background-color: var(--status-active-bg);
+}
+
+.status-pill.inactive {
+  color: var(--status-inactive-text);
+  background-color: var(--status-inactive-bg);
+}
+
+.platform-cell {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
+
+.platform-btn-group {
+  display: flex;
+  gap: 5px;
+  justify-content: center;
+}
+
+.platform-btn {
+  background-color: #ccc; /* Default tag color */
+  color: white;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  opacity: 0.5; /* Dim by default */
+  transition: opacity 0.2s ease-in-out;
+}
+
+.platform-btn.active {
+  opacity: 1; /* Full opacity when active */
+}
+
+.platform-btn.ig { background-color: #c13584; }
+.platform-btn.fb { background-color: #1877f2; }
+.platform-btn.yt { background-color: #ff0000; } /* ถ้ามี YT ด้วย */
+
+.role-cell {
+  font-weight: 500;
+}
+
+.action-cell {
+  cursor: pointer;
+}
+
+.action-icon {
+  width: 25px;
+  height: 25px;
+  object-fit: contain;
+}
+
+/* Table Footer / Pagination */
+.staffs-table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 25px;
+  background-color: #ffffff;
+  border-top: 1px solid #e5e7eb;
+  border-radius: 0 0 20px 20px; /* Match parent border-radius */
+  font-size: 13px;
+  color: var(--text-grey);
+  border-radius: 0 0 30px 30px;
+}
+
+.pagination-controls {
+  display: flex;
+  gap: 10px;
+}
+
+.pagination-btn {
+  background-color: #f0f0f0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 5px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pagination-btn:hover {
+  background-color: #e0e0e0;
+}
+
+.arrow-icon {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
+
+.arrow-icon.prev {
+  transform: rotate(90deg); /* Rotate for left arrow */
+}
+
+.arrow-icon.next {
+  transform: rotate(-90deg); /* Rotate for right arrow */
+}
+
+.see-all-info {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  cursor: pointer;
+}
+
+.see-all-arrow {
+  width: 15px;
+  height: 15px;
+  object-fit: contain;
+}
+
+/* ===== STAFFS PAGE STYLES ===== */
+/* ให้ .staffs-container และ .staffs-main-content ขยายเต็มขวา */
+.rcp-dashboard-body .main .staffs-container,
+.rcp-dashboard-body .main .staffs-main-content {
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+    margin: 0;
+    box-sizing: border-box;
+}
+
+/* ใส่ระยะห่างขอบซ้าย-ขวาให้ staffs-main-content อย่างพอดี */
+/* เพิ่มระยะหายใจด้านข้างให้กล่องหลัก */
+.rcp-dashboard-body .staffs-container {
+    padding-left: 32px;
+    padding-right: 32px;
+}
+
+#view-staffs.staffs-container {
+    padding-left: 32px !important;
+    padding-right: 32px !important;
+}
+
+/* —————————————————————————————
+   จัด Grid ให้ Header + Rows ตรงกัน 100%
+   ————————————————————————————— */
+/* Table columns responsive, ไม่ใช้ 100vw */
+/* ========== STAFFS TABLE STYLE ========== */
+
+/* ========== GRID CONFIGURATION ========== */
+.staffs-table-header,
+.staffs-table-body .staff-data-row {
+  display: grid;
+  grid-template-columns:
+    60px     /* # */
+    1fr      /* Staff ID */
+    2.5fr    /* Name */
+    3fr      /* E-mail */
+    1.5fr    /* Status */
+    2fr      /* Project */
+    1.5fr    /* Platform */
+    1.5fr    /* Role */
+    60px;    /* Action */
+  column-gap: 20px;
+  width: 100%;
+  min-width: 1100px; /* เพิ่มเพื่อไม่ให้คอลัมน์เบียด */
+}
+
+.staffs-table-header .col-name,
+.staffs-table-header .col-email {
+  min-width: 160px;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+}
+
+.staffs-table-body .col-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;               /* ✅ ลดจาก 10px */
+  padding-left: 0px;      /* ✅ เอา padding ทิ้ง */
+  min-width: 200px;       /* ✅ ลดจาก 240px ถ้าอยากให้เมลเข้ามาตรง */
+  max-width: 200px;       /* ✅ กันล้น */
+}
+
+.staffs-table-body .col-email {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+}
+.staffs-table-body .col-name .staff-avatar {
+  margin-right: 6px; /* แทน gap เดิม */
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/* ชื่อที่ editable */
+.staffs-table-body .col-name .editable-cell {
+  width: 100%;
+  max-width: 160px; /* ปรับให้เหมาะกับ column ของ NAME */
+  min-width: 80px;
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-color: transparent;
+  border: none;
+  outline: none;
+}
+
+.staffs-table-body .col-email .editable-cell {
+  flex: 1 1 160px;
+  min-width: 80px;
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  background-color: transparent;
+  border: none;
+  outline: none;
+}
+
+.staffs-table-body .cell.col-email {
+  display: flex;
+  align-items: center;
+}
+
+.staffs-table-body .col-email .editable-cell:focus {
+  border: 1px solid #ccc;
+  background-color: #fff;
+  padding: 2px 4px;
+  max-width: 100%; /* ✅ เปลี่ยนจาก 220px → ให้ยืดตาม parent */
+}
+
+
+
+
+
+/* ========== HEADER STYLE ========== */
+.staffs-table-header {
+  padding: 6px 16px;
+  border-radius: 8px 8px 0 0;
+}
+
+/* ทุก .header-column ตั้งต้นแบบกลาง */
+.staffs-table-header .header-column {
+    min-width: 100px;
+    max-width: 220px; /* ✅ ป้องกันการยืดเกิน */
+    flex: 1 1 auto;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.col-index {
+    flex: 0 0 50px;
+}
+.col-action {
+    flex: 0 0 90px;
+}
+
+@media (max-width: 1280px) {
+  .staffs-table-body .col-email .editable-cell {
+    flex: 1 1 140px;
+  }
+}
+
+/* เฉพาะคอลัมน์ที่ต้องขยับ: เริ่มจูน */
+.staffs-table-header > div:nth-child(2) { /* Staff ID */
+  align-items: flex-start;
+  padding-left: 3px;
+}
+.staffs-table-header > div:nth-child(3) {
+  align-items: center !important;      /* ✅ เปลี่ยนจาก flex-start */
+  justify-content: center !important;  /* ✅ ตรงกลางแนวแกนหลัก */
+  text-align: center;
+  padding-right: 0px !important;       /* ✅ ลบ padding ขวา ถ้าไม่จำเป็น */
+  transform: translateX(-69px);
+}
+.staffs-table-header > div:nth-child(4) {
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center;
+  padding-right: 140px !important; /* ✅ จาก 95 → 40 กำลังดี */
+  
+}
+.staffs-table-header > div:nth-child(5) { /* Status */
+  align-items: flex-start;
+  padding-right: 15px;
+}
+.staffs-table-header > div:nth-child(6) { /* Project */
+  align-items: flex-start;
+  transform: translateX(-22px);
+  padding-left: 8px;
+}
+
+.col-project {
+  flex: 0 0 180px;  /* ✅ ล็อคความกว้างเหมือน col-name, col-email */
+  max-width: 180px;
+  min-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+/* PLATFORM */
+.staffs-table-header > div:nth-child(7) {
+  align-items: flex-start;
+  padding-right: 40px;
+
+}
+.staffs-table-body .staff-data-row > div:nth-child(7) {
+  padding-right: 40px;
+}
+
+/* ROLE */
+.staffs-table-header > div:nth-child(8) {
+  align-items: flex-start;
+  padding-right: 33px;
+  justify-self: start;  /* ✅ เพิ่มบรรทัดนี้ */
+}
+.staffs-table-body .staff-data-row > div:nth-child(8) {
+  padding-right: 40px;
+}
+
+/* ACTION */
+.staffs-table-header > div:nth-child(9) {
+  justify-self: center;
+  padding-right: 31px;
+}
+.staffs-table-body .staff-data-row > div:nth-child(9) {
+  justify-self: center;
+  padding-right: 20px;
+}
+
+/* ========== HEADER CONTENT ========== */
+.staffs-table-header .header-icon {
+  width: 20px;
+  height: 20px;
+  display: block;
+  margin: 0 auto;
+  margin-bottom: 4px;
+}
+.staffs-table-header .header-text {
+  font-size: 12px;
+  font-weight: 500;
+  color: #fff;
+  text-transform: uppercase;
+  width: 100%;
+  display: block;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ========== BODY CELL ALIGNMENTS ========== */
+
+/* จัดกลาง: # และ Action */
+.staffs-table-header > div:nth-child(1),
+.staffs-table-body .staff-data-row > div:nth-child(1),
+.staffs-table-header > div:nth-child(9),
+.staffs-table-body .staff-data-row > div:nth-child(9) {
+  justify-self: center;
+  text-align: center;
+}
+
+/* จัดซ้าย: Staff ID, Name, Email, Status, Project */
+.staffs-table-body .staff-data-row > div:nth-child(2) {
+  padding-left: 12px;
+}
+.staffs-table-body .staff-data-row > div:nth-child(3) {
+  padding-left: 14px;
+}
+.staffs-table-body .staff-data-row > div:nth-child(4) {
+  padding-right: 20px;
+}
+.staffs-table-body .staff-data-row > div:nth-child(5) {
+  padding-left: 12px;
+}
+.staffs-table-body .staff-data-row > div:nth-child(6) {
+  padding-left: 0px;
+}
+
+/* จัด avatar + name ให้อยู่ตรงกลางพอดี */
+.staffs-table-body .cell.col-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.staffs-table-body .col-status {
+  min-width: 120px;      /* ปรับตามปุ่ม */
+  white-space: nowrap;
+}
+
+
+
+/* —————— ถ้าต้องการปรับอีก ให้ copy โครงด้านบนเปลี่ยน nth-child คือ col index —————— */
+
+/* Custom Scrollbar for staffs-table-body */
+.staffs-table-body::-webkit-scrollbar {
+  width: 4px; /* Smaller default width */
+}
+
+.staffs-table-body::-webkit-scrollbar-track {
+  background: #f1f1f1; /* Color of the track */
+  border-radius: 10px;
+}
+
+.staffs-table-body::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, #333, #000); /* Black gradient for the thumb */
+  border-radius: 10px;
+}
+
+.staffs-table-body::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(to bottom, #555, #222); /* Darker gradient on hover */
+}
+
+/* This is the part that will make it wider on hover */
+.staffs-table-body:hover::-webkit-scrollbar {
+  width: 6px; /* Wider on hover */
+}
+
+/* Styles for editable cells */
+.editable-cell {
+  width: 100%;
+  padding: 4px 0px;
+  border: 1px solid transparent; /* Default transparent border */
+  border-radius: 4px;
+  outline: none; /* Remove default outline */
+  transition: all 0.2s ease-in-out;
+  min-height: 24px; /* Ensure consistent height */
+  display: flex;
+  align-items: center;
+}
+
+.editable-cell:hover {
+  background-color: #f0f0f0; /* Light background on hover */
+}
+
+.editable-cell:focus {
+  border: 1px solid #ccc;
+  background-color: #fff;
+  padding: 2px 4px;
+  max-width: 160px;  /* บังคับแม้ตอน focus */
+}

@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RCP Center | Dashboard</title>
+    
+    
+    <!-- Tailwind -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SweetAlert2 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css"/>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <!-- YOUR CSS -->
+    <link rel="stylesheet" href="static/css/rcp_style.css"> <!-- เพิ่มตรงนี้ -->
+    <link rel="stylesheet" href="static/css/staffs_page_style.css"> <!-- เพิ่มตรงนี้ -->
+    <link rel="stylesheet" href="static/css/Profire_style.css">
+    <link rel="stylesheet" href="static/css/login_style.css">
+    <link rel="stylesheet" href="static/css/Leaves_management_style.css">
+    <title>Staffs Page - Final Design</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="stylesheet" href="style.css">
+    <!-- Flatpickr CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body class="rcp-dashboard-body">
+<!-- ...body... -->
+
+    <!-- ====== APP CONTAINER (โชว์หลัง login) ====== -->
+    <div id="app-container" class="hidden-view">
+      <div class="container">
+        <div class="sidebar">
+            <div class="logo">RCP Center</div>
+            <!-- ตรงใต้ <div class="logo"> -->
+            <div class="px-4 mb-4">
+                <label class="flex items-center cursor-pointer">
+                    <span class="mr-2 text-sm font-medium text-white">Admin Mode</span>
+                    <label class="switch">
+                    <input type="checkbox" id="admin-switch">
+                    <span class="slider"></span>
+                    </label>
+                </label>
+                </div>
+            <div id="user-menu" class="menu">
+                <a href="#" data-view="home"><i class="fa-solid fa-house fa-fw"></i> หน้าแรก</a>
+                <a href="#" data-view="work"><i class="fa-solid fa-table-list fa-fw"></i> ลงงาน</a>
+                <a href="#" data-view="team"><i class="fa-solid fa-users fa-fw"></i> ทีมงาน</a>
+                <a href="#" data-view="profile"><i class="fa-solid fa-user fa-fw"></i> โปรไฟล์</a>
+                <a href="#"><i class="fa-solid fa-bell fa-fw"></i> คำขอ</a>
+            </div>
+
+            <!-- เพิ่มโซน Admin ไว้ถัดมา และซ่อนด้วย class hidden -->
+            <div id="admin-menu" class="menu hidden">
+                <a href="#" data-view="admin-dashboard"><i class="fa-solid fa-tachometer-alt fa-fw"></i> Admin Dashboard</a>
+                <a href="#" data-view="staffs"><i class="fa-solid fa-users-cog fa-fw"></i> Staffs</a>
+                <a href="#" data-view="leaves"><i class="fa-solid fa-calendar-check fa-fw"></i> Leaves</a>
+                <a href="#" data-view="salary"><i class="fa-solid fa-wallet fa-fw"></i> Salary</a>
+                <a href="#" data-view="stats"><i class="fa-solid fa-chart-line fa-fw"></i> Stats</a>
+                <a href="#" data-view="notifications"><i class="fa-solid fa-bell fa-fw"></i> Notifications</a>
+                <a href="#" data-view="export"><i class="fa-solid fa-file-export fa-fw"></i> Export Data</a>
+                <a href="#" data-view="settings"><i class="fa-solid fa-gear fa-fw"></i> Settings</a>
+            </div>
+
+
+
+            <!-- ย้าย Powered by ตรงนี้ อยู่ท้ายสุดใน sidebar -->
+            <div class="sidebar-version">เวอร์ชั่น 1.2 Pro<br>Powered by QtpV2</div>
+        </div>
+
+        <div class="main">
+            <div id="view-home" class="hidden-view">
+                <header class="flex justify-between items-center mb-8">
+                    <div>
+                        <h1 class="text-4xl font-bold text-gray-800">แดชบอร์ด</h1>
+                        <p class="text-gray-500 mt-1" id="date-display-home"></p>
+                    </div>
+                    <div class="flex items-center gap-4">
+                        <div id="time-display-home" class="text-2xl font-semibold text-gray-700 bg-white px-4 py-2 rounded-lg shadow-sm"></div>
+                        <span id="top-right-user-name" class="text-lg font-semibold text-gray-800"></span>
+                        <img src="https://i.pravatar.cc/50?img=1" alt="Avatar" id="top-right-avatar" class="w-12 h-12 rounded-full">
+                    </div>
+                </header>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div class="lg:col-span-2 space-y-8">
+                        <div class="bg-white p-8 rounded-2xl shadow-md">
+                            <h2 class="text-2xl font-bold text-gray-800 mb-6">Quick Actions</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                <div class="flex flex-col items-center p-6 bg-blue-50 rounded-xl cursor-pointer hover:bg-blue-100 transition-colors" onclick="requestLeave()">
+                                    <i class="fas fa-plane-departure text-3xl text-blue-500"></i><span class="mt-3 font-semibold text-blue-800">แจ้งลางาน</span>
+                                </div>
+                                <div class="flex flex-col items-center p-6 bg-green-50 rounded-xl cursor-pointer hover:bg-green-100 transition-colors" onclick="showHolidays()">
+                                    <i class="fas fa-calendar-alt text-3xl text-green-500"></i><span class="mt-3 font-semibold text-green-800">วันหยุดประจำปี</span>
+                                </div>
+                                <div class="flex flex-col items-center p-6 bg-yellow-50 rounded-xl cursor-pointer hover:bg-yellow-100 transition-colors" onclick="showAnnouncements()">
+                                    <i class="fas fa-bullhorn text-3xl text-yellow-500"></i><span class="mt-3 font-semibold text-yellow-800">ประกาศ</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-8 rounded-2xl shadow-md">
+                        <h2 class="text-2xl font-bold text-gray-800 mb-6">สรุปการทำงานเดือนนี้</h2>
+                        <ul class="space-y-5">
+                            <li class="flex items-center"><i class="fas fa-check-circle text-xl text-green-500 w-8"></i><div><p class="text-gray-500">เข้างาน</p><p class="font-bold text-lg text-gray-800">20 วัน</p></div></li>
+                            <li class="flex items-center"><i class="fas fa-times-circle text-xl text-red-500 w-8"></i><div><p class="text-gray-500">ขาดงาน</p><p class="font-bold text-lg text-gray-800">0 วัน</p></div></li>
+                            <li class="flex items-center"><i class="fas fa-clock text-xl text-orange-500 w-8"></i><div><p class="text-gray-500">มาสาย</p><p class="font-bold text-lg text-gray-800">1 ครั้ง</p></div></li>
+                            <li class="flex items-center"><i class="fas fa-plane-departure text-xl text-blue-500 w-8"></i><div><p class="text-gray-500">ลาหยุด</p><p class="font-bold text-lg text-gray-800">2 วัน</p></div></li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            
+
+            <div id="view-work" class="hidden-view">
+                <div class="dashboard-cards">
+                        <div class="card" id="user-greeting-card"><span class="title" id="greeting-user-name"></span><div class="main-value" id="current-project-name">-</div><div class="sub" id="project-last-update">อัปเดตล่าสุด: -</div></div>
+                    <div class="card"><span class="title">แจ้งเตือน</span><div class="main-value alert">ยังไม่ได้ส่งคลิปที่ 3</div><div class="sub">ยอดวิวคลิป 2 ต่ำกว่าเป้า!</div></div>
+                    <div class="card"><span class="title">สถิติเดือนรวม</span><div class="main-value">72,000 วิว</div><div class="sub">เช็กชื่อ: 25/25 วัน</div></div>
+                </div>
+                <div class="dashboard-section">
+                    <div class="flex items-center justify-between mb-4">
+                        <h2 class="font-bold text-2xl text-[#2196f3]">ลงงานประจำวันที่ <span id="current-date">--/--/--</span></h2>
+                        <input type="text" id="date-picker" class="calendar-btn" placeholder="📅 เลือกวันที่">
+                    </div>
+                    
+
+
+
+                    <!-- ตารางหลักของระบบ (ตารางหลักที่ต้องการ scroll bar ในกรอบขาว) -->
+                    <div class="table-wrap main-table-wrap"> <!-- เพิ่ม main-table-wrap เพื่อแยก style scroll -->
+                        <table class="data-table" style="min-width: 800px;">
+                            <thead>
+                                <tr>
+                                    <th style="width:6%;" class="text-center">No.</th>
+                                    <th style="width:18%;">ชื่อเพจ/ช่อง</th>
+                                    <th style="width:10%;">Platform</th>
+                                    <th style="width:14%;">ลิงก์คลิป 1</th>
+                                    <th style="width:14%;">ลิงก์คลิป 2</th>
+                                    <th style="width:10%;">ยอดวิว 1</th>
+                                    <th style="width:10%;">ยอดวิว 2</th>
+                                    <th style="width:10%;">สถานะส่งงาน</th>
+                                </tr>
+                            </thead>
+                            <tbody id="work-rows">
+                                <!-- ตรงนี้ JS จะ populate ข้อมูลมาใส่ -->
+                            </tbody>
+                        </table>
+                    </div>
+                    </div>
+                    </div>
+
+
+            <!-- =================== ตารางทีม/แท็บทีม =================== -->
+            <div id="view-team" class="hidden-view">
+                <div class="dashboard-cards">
+                    <div class="card"><span class="title">ภาพรวมทีมงาน</span></div>
+                </div>
+                <div class="team-mini-tabs flex gap-2 mt-4 mb-6">
+                    <button class="tab-btn active" data-tab="summary">สรุปยอด</button>
+                    <button class="tab-btn" data-tab="status">สถานะงาน</button>
+                    <button class="tab-btn" data-tab="analytics">สถิติทีม</button>
+                    <button class="tab-btn" data-tab="members">รายชื่อทีม</button>
+                </div>
+                <!-- Mini Tab Content -->
+                <div id="team-tab-summary" class="team-tab-content fadein">
+                    <!-- ตัวอย่างสรุปยอดทีม/ตาราง (mock) -->
+                    <div class="bg-white rounded-xl shadow p-6">
+                        <h3 class="font-bold text-lg mb-2">ยอดรวมทีม (วันนี้)</h3>
+                        <div class="grid grid-cols-4 gap-4 text-center">
+                            <div>
+                                <div class="text-3xl font-bold text-blue-500">25</div>
+                                <div class="text-gray-500">คลิปทั้งหมด</div>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-green-500">187,900</div>
+                                <div class="text-gray-500">ยอดวิวรวม</div>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-orange-500">21</div>
+                                <div class="text-gray-500">ส่งครบ</div>
+                            </div>
+                            <div>
+                                <div class="text-3xl font-bold text-red-400">4</div>
+                                <div class="text-gray-500">ยังไม่ส่ง</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="team-tab-status" class="team-tab-content hidden-view fadein">
+                    <!-- ตารางสถานะส่งงานแต่ละคน (ตารางนี้ไม่มี scroll bar แยก style ได้) -->
+                    <div class="bg-white rounded-xl shadow p-6 mt-4">
+                        <h3 class="font-bold text-lg mb-2">สถานะส่งงานทีม (รายชื่อ)</h3>
+                        <table class="data-table">
+                        <thead>
+                        <tr>
+                            <th>ชื่อ</th><th>IG/FB</th><th>คลิปที่ส่ง</th><th>ยอดวิว</th><th>สถานะ</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <!-- mock ตัวอย่าง -->
+                        <tr>
+                            <td>นัท IG</td><td><span class="ig-badge">IG</span></td><td>2</td><td>20,300</td><td class="text-green-600 font-bold">ส่งครบ</td>
+                        </tr>
+                        <tr>
+                            <td>อาย FB</td><td><span class="fb-badge">FB</span></td><td>1</td><td>9,800</td><td class="text-red-500 font-bold">ยังไม่ส่ง</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                    </div>
+                </div>
+                <div id="team-tab-analytics" class="team-tab-content hidden-view fadein">
+                    <div class="bg-white rounded-xl shadow p-6 mt-4">
+                    <h3 class="font-bold text-lg mb-2">กราฟสถิติ (Mock)</h3>
+                    <img src="https://placehold.co/600x180?text=Graph+Coming+Soon" class="mx-auto rounded">
+                    </div>
+                </div>
+                <div id="team-tab-members" class="team-tab-content hidden-view fadein">
+                    <div class="bg-white rounded-xl shadow p-6 mt-4">
+                    <h3 class="font-bold text-lg mb-2">รายชื่อสมาชิกทีม</h3>
+                    <ul class="space-y-2">
+                        <li>1. นัท IG</li>
+                        <li>2. อาย FB</li>
+                        <li>3. ตอง IG</li>
+                        <li>4. เบนซ์ FB</li>
+                    </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =================== View: Profile (NEW) =================== -->
+            <div id="view-profile" class="hidden-view">
+                <div id="patient-profile-page">
+                    <div class="ppp-top-section">
+                        <div class="ppp-header">
+                            <h1 class="ppp-title">Profile</h1>
+                            <div class="ppp-search-bar">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                                <input type="text" placeholder="Search...">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ppp-patient-card">
+                        <div class="ppp-card-content"> 
+                            
+                            <div class="ppp-sidebar">
+                                <div class="ppp-avatar-container">
+                                    <img class="ppp-avatar" id="profile-page-avatar" src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop" alt="Patient Avatar">
+                                    <button id="open-avatar-modal-btn" class="change-avatar-button"><i class="fas fa-camera"></i></button>
+                                </div>
+                                <div class="ppp-user-info">
+                                    <h2 class="name"></h2>
+                                    <span class="role"></span>
+                                </div>
+
+                                <div class="profile-completeness">
+                                    <div class="completeness-text">
+                                        <span>Profile:</span>
+                                        <strong>75% Complete</strong>
+                                    </div>
+                                    <div class="progress-bar-bg">
+                                        <div class="progress-bar-fill" style="width: 75%;"></div>
+                                    </div>
+                                </div>
+
+                                <ul class="ppp-nav-menu">
+                                    <li>
+                                        <a href="#personal-info" class="active" data-tab-target="personal-info">
+                                            <i class="fas fa-user-circle"></i>
+                                            <span>ข้อมูลส่วนตัว</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#login-password" data-tab-target="login-password">
+                                            <i class="fas fa-lock"></i>
+                                            <span>Reset your Password</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#usage-history" data-tab-target="usage-history">
+                                            <i class="fas fa-clipboard-list"></i> 
+                                            <span>ประวัติการใช้งาน</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#privacy-settings" data-tab-target="privacy-settings">
+                                            <i class="fas fa-shield-alt"></i> <span>การตั้งค่าความเป็นส่วนตัว</span>
+                                        </a>
+                                    </li>
+                                    <li>
+                                        <a href="#" id="logout-link"> 
+                                            <i class="fas fa-sign-out-alt"></i>
+                                            <span>Log Out</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                            
+                            <div class="ppp-main-content">
+                                <div id="personal-info" class="ppp-tab-content active">
+                                    <h2 class="ppp-content-header ppp-title">ข้อมูลส่วนตัว</h2>
+
+                                    <div class="form-group" style="margin-bottom: 20px;">
+                                        <label>เพศ</label>
+                                        <div class="radio-group-container">
+                                            <label class="radio-label">
+                                                <input type="radio" name="gender" value="male" checked>
+                                                ชาย
+                                            </label>
+                                            <label class="radio-label">
+                                                <input type="radio" name="gender" value="female">
+                                                หญิง
+                                            </label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="first-name">First Name</label>
+                                            <div class="input-field-wrapper">
+                                                <input type="text" id="first-name" value="QTP">
+                                                <i class="fas fa-user suffix-icon"></i> 
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="last-name">Last Name</label>
+                                            <div class="input-field-wrapper">
+                                                <input type="text" id="last-name" value="RATCHA">
+                                                <i class="fas fa-user suffix-icon"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-row">
+                                         <div class="form-group">
+                                            <label for="email">Email</label>
+                                            <div class="input-field-wrapper">
+                                                <input type="email" id="email" value="qtp.ratcha@example.com" readonly>
+                                                <i class="fas fa-envelope suffix-icon"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="address">Address</label>
+                                            <div class="input-field-wrapper">
+                                                <input type="text" id="address" value="3605 Parker Rd.">
+                                                <i class="fas fa-map-marker-alt suffix-icon"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                     <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="phone">Phone Number</label>
+                                            <div class="input-field-wrapper">
+                                                <input type="tel" id="phone" value="(405) 555-0128">
+                                                <i class="fas fa-phone suffix-icon"></i>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="dob">Date of Birth</label>
+                                            <div class="input-field-wrapper">
+                                                <input type="text" id="dob" value="1 Feb, 1995">
+                                                <i class="fas fa-calendar-alt suffix-icon"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+                                     <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="location">Location</label>
+                                            <div class="input-field-wrapper">
+                                                <input type="text" id="location" value="Atlanta, USA">
+                                                <i class="fas fa-chevron-down suffix-icon"></i>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="postal-code">Postal Code</label>
+                                            <div class="input-field-wrapper">
+                                                <input type="text" id="postal-code" value="30301">
+                                                <i class="fas fa-map-pin suffix-icon"></i>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="form-actions">
+                                        <button class="btn btn-secondary">Discard Changes</button>
+                                        <button class="btn btn-primary">Save Changes</button>
+                                    </div>
+                                </div>
+
+                                <div id="login-password" class="ppp-tab-content" style="display: none;">
+                                    <h2 class="ppp-content-header ppp-title">Reset your Password</h2>
+                                    <div class="change-password-form-wrapper">
+                                        <div class="form-group">
+                                            <label for="old-password">Old password</label>
+                                            <div class="input-field-wrapper">
+                                                <i class="fas fa-key prefix-icon"></i> 
+                                                <input type="password" id="old-password" placeholder="กรอกรหัสผ่านปัจจุบัน" maxlength="30">
+                                                <i class="fas fa-eye-slash toggle-password" data-target="old-password"></i>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="new-password">New password</label>
+                                            <div class="input-field-wrapper">
+                                                <i class="fas fa-lock prefix-icon"></i>
+                                                <input type="password" id="new-password" placeholder="กรอกรหัสผ่านใหม่" maxlength="30">
+                                                <i class="fas fa-eye-slash toggle-password" data-target="new-password"></i>
+                                            </div>
+                                            <div class="password-strength-indicator">
+                                                <div class="strength-bar-bg">
+                                                    <div id="password-strength-bar" class="strength-bar-fill"></div>
+                                                </div>
+                                                <div id="password-strength-text" class="strength-text"></div>
+                                                <ul class="password-requirements">
+                                                    <li class="requirement" data-requirement="length"><i class="fas fa-circle-xmark"></i> ขั้นต่ำ 8 ตัวอักษร</li>
+                                                    <li class="requirement" data-requirement="uppercase"><i class="fas fa-circle-xmark"></i> ต้องประกอบด้วยตัวพิมพ์ใหญ่ 1 ตัว</li>
+                                                    <li class="requirement" data-requirement="number"><i class="fas fa-circle-xmark"></i> ต้องประกอบด้วยตัวเลข 1 ตัว</li>
+                                                    <li class="requirement" data-requirement="special"><i class="fas fa-circle-xmark"></i> ต้องประกอบด้วยอักขระพิเศษอย่างน้อย 1 ตัว เช่น _ @ # เป็นต้น</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="confirm-password">Confirm password</label>
+                                            <div class="input-field-wrapper">
+                                                <i class="fas fa-lock prefix-icon"></i>
+                                                <input type="password" id="confirm-password" placeholder="ยืนยันรหัสผ่านใหม่" maxlength="30">
+                                                <i class="fas fa-eye-slash toggle-password" data-target="confirm-password"></i>
+                                            </div>
+                                            <div id="confirm-password-message" class="match-message" style="display: none;"></div>
+                                        </div>
+                                        <button id="update-password-btn" class="update-password-button">Update Password</button>
+                                        <div id="form-status-message" class="form-status-message" style="display: none;"></div>
+                                    </div>
+                                </div>
+
+                                <div id="usage-history" class="ppp-tab-content" style="display: none;">
+                                    <h2 class="ppp-content-header ppp-title">ประวัติการใช้งาน</h2>
+                                    <div class="usage-history-wrapper">
+                                        <div class="history-controls">
+                                            <input type="text" id="history-search" placeholder="ค้นหาประวัติการใช้งาน..." class="history-search-input">
+                                            </div>
+                                        
+                                        <div class="history-list">
+                                            <div class="history-item">
+                                                <div class="item-icon"><i class="fas fa-sign-in-alt"></i></div>
+                                                <div class="item-details">
+                                                    <div class="item-header">
+                                                        <span class="item-type">เข้าสู่ระบบ</span>
+                                                        <span class="item-timestamp">เมื่อ 2 นาทีที่แล้ว (2025-07-01 23:36)</span>
+                                                    </div>
+                                                    <p class="item-description">เข้าสู่ระบบจาก Chrome บน Windows (IP: 192.168.1.1)</p>
+                                                </div>
+                                            </div>
+                                            <div class="history-item">
+                                                <div class="item-icon"><i class="fas fa-lock-open"></i></div>
+                                                <div class="item-details">
+                                                    <div class="item-header">
+                                                        <span class="item-type">เปลี่ยนรหัสผ่าน</span>
+                                                        <span class="item-timestamp">เมื่อ 1 ชั่วโมงที่แล้ว (2025-07-01 22:38)</span>
+                                                    </div>
+                                                    <p class="item-description">เปลี่ยนรหัสผ่านสำเร็จ</p>
+                                                </div>
+                                            </div>
+                                            <div class="history-item">
+                                                <div class="item-icon"><i class="fas fa-user-edit"></i></div>
+                                                <div class="item-details">
+                                                    <div class="item-header">
+                                                        <span class="item-type">อัปเดตข้อมูลส่วนตัว</span>
+                                                        <span class="item-timestamp">เมื่อวานนี้ (2025-06-30 10:15)</span>
+                                                    </div>
+                                                    <p class="item-description">แก้ไขชื่อ-นามสกุล, ที่อยู่, และเบอร์โทรศัพท์</p>
+                                                </div>
+                                            </div>
+                                            <div class="history-item">
+                                                <div class="item-icon"><i class="fas fa-cogs"></i></div>
+                                                <div class="item-details">
+                                                    <div class="item-header">
+                                                        <span class="item-type">ตั้งค่าความเป็นส่วนตัว</span>
+                                                        <span class="item-timestamp">27 มิถุนายน 2025 (2025-06-27 15:00)</span>
+                                                    </div>
+                                                    <p class="item-description">ปิดการอนุญาตการตลาดแบบตรง</p>
+                                                </div>
+                                            </div>
+                                            <div class="history-item">
+                                                <div class="item-icon"><i class="fas fa-clipboard-list"></i></div>
+                                                <div class="item-details">
+                                                    <div class="item-header">
+                                                        <span class="item-type">ทำรายการโพสต์วิดีโอ</span>
+                                                        <span class="item-timestamp">25 มิถุนายน 2025 (2025-06-25 11:30)</span>
+                                                    </div>
+                                                    <p class="item-description">ทำรายการโพสต์วิดีโอไปยัง Platfrom IG AND FACEBOOK</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="history-pagination" style="text-align: center; margin-top: 20px;">
+                                            </div>
+                                    </div>
+                                    </div>
+
+                                <div id="privacy-settings" class="ppp-tab-content" style="display: none;">
+                                    <h2 class="ppp-content-header ppp-title">การตั้งค่าความเป็นส่วนตัว</h2>
+                                    
+                                    <div class="privacy-settings-wrapper">
+                                        <div class="privacy-section">
+                                            <h3>การควบคุมการแบ่งปันข้อมูล</h3>
+                                            <p class="section-description">จัดการว่าข้อมูลของคุณจะถูกใช้งานหรือแบ่งปันอย่างไรบ้าง</p>
+
+                                            <div class="setting-item">
+                                                <div class="setting-info">
+                                                    <h4>แบ่งปันข้อมูลเพื่อปรับปรุงบริการ</h4>
+                                                    <p>อนุญาตให้เราใช้ข้อมูลที่ไม่ระบุตัวตนของคุณเพื่อปรับปรุงประสบการณ์การใช้งาน</p>
+                                                </div>
+                                                <label class="toggle-switch">
+                                                    <input type="checkbox" id="data-sharing-toggle" checked>
+                                                    <span class="slider round"></span>
+                                                </label>
+                                            </div>
+
+                                            <div class="setting-item">
+                                                <div class="setting-info">
+                                                    <h4>อนุญาตการตลาดแบบตรง</h4>
+                                                    <p>รับข้อมูลเกี่ยวกับผลิตภัณฑ์และบริการใหม่ๆ จากเรา</p>
+                                                </div>
+                                                <label class="toggle-switch">
+                                                    <input type="checkbox" id="direct-marketing-toggle">
+                                                    <span class="slider round"></span>
+                                                </label>
+                                            </div>
+
+                                            <div class="setting-item">
+                                                <div class="setting-info">
+                                                    <h4>เก็บประวัติการใช้งาน (สำหรับวิเคราะห์ภายใน)</h4>
+                                                    <p>อนุญาตให้เราเก็บประวัติการใช้งานของคุณเพื่อการวิเคราะห์และพัฒนาฟีเจอร์</p>
+                                                </div>
+                                                <label class="toggle-switch">
+                                                    <input type="checkbox" id="usage-history-toggle" checked>
+                                                    <span class="slider round"></span>
+                                                </label>
+                                            </div>
+                                        </div>
+
+                                        <div class="form-actions privacy-actions">
+                                            <button class="btn btn-secondary">ยกเลิก</button>
+                                            <button class="btn btn-primary" id="save-privacy-settings-btn">บันทึกการเปลี่ยนแปลง</button>
+                                        </div>
+                                        <div class="form-status-message" id="privacy-status-message" style="display: none;"></div>
+                                    </div>
+                                    </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="logout-modal-overlay" class="logout-modal-overlay">
+                    <div class="logout-modal-content">
+                        <h3 class="logout-modal-title">ยืนยันการออกจากระบบ</h3>
+                        <p class="logout-modal-message">คุณแน่ใจหรือไม่ว่าต้องการออกจากระบบ?</p>
+                        <div class="logout-modal-buttons">
+                            <button id="confirm-logout-btn" class="btn btn-primary">ออกจากระบบ</button>
+                            <button id="cancel-logout-btn" class="btn btn-secondary">ยกเลิก</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- =================== View: Admin Dashboard =================== -->
+            <div id="view-admin-dashboard" class="hidden-view px-8 py-6">
+                <div class="max-w-6xl mx-auto space-y-8">
+                    <header class="flex justify-between items-center">
+                    <h1 class="text-3xl font-extrabold text-gray-900">Admin Dashboard</h1>
+                    <button id="exit-admin-btn"
+                            class="flex items-center space-x-2 bg-white border border-gray-200 px-4 py-2 rounded-lg 
+                                    shadow-sm hover:shadow-md transition-all duration-200 text-gray-700">
+                        <i class="fa-solid fa-arrow-left"></i>
+                        <span>Exit Admin</span>
+                    </button>
+                    </header>
+
+                    <div class="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                    <!-- Card Template -->
+                    <a href="#" data-view="staffs"
+                        class="group block bg-white p-5 rounded-xl shadow hover:shadow-lg transform hover:-translate-y-1 
+                                transition-all duration-300 border border-transparent hover:border-gray-100">
+                        <div class="flex items-center justify-center w-10 h-10 bg-indigo-50 rounded-full mb-3
+                                    group-hover:bg-indigo-100 transition-colors duration-200">
+                        <i class="fa-solid fa-users-cog text-indigo-600"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-1">Staff Management</h3>
+                        <p class="text-sm text-gray-500">เพิ่ม/ลบ/แก้ไขพนักงาน</p>
+                    </a>
+
+                    <a href="#" data-view="leaves" class="group block bg-white p-5 rounded-xl shadow hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 border border-transparent hover:border-gray-100">
+                        <div class="flex items-center justify-center w-10 h-10 bg-green-50 rounded-full mb-3 group-hover:bg-green-100 transition-colors duration-200">
+                            <i class="fa-solid fa-calendar-check text-green-600"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-1">Leave Management</h3>
+                        <p class="text-sm text-gray-500">ขอลา/อนุมัติ/ย้อนหลัง</p>
+                    </a>
+
+                    <a href="#" data-view="salary"
+                        class="group block bg-white p-5 rounded-xl shadow hover:shadow-lg transform hover:-translate-y-1 
+                                transition-all duration-300 border border-transparent hover:border-gray-100">
+                        <div class="flex items-center justify-center w-10 h-10 bg-yellow-50 rounded-full mb-3
+                                    group-hover:bg-yellow-100 transition-colors duration-200">
+                        <i class="fa-solid fa-wallet text-yellow-600"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-1">Salary</h3>
+                        <p class="text-sm text-gray-500">เงินเดือน/Export</p>
+                    </a>
+
+                    <a href="#" data-view="stats"
+                        class="group block bg-white p-5 rounded-xl shadow hover:shadow-lg transform hover:-translate-y-1 
+                                transition-all duration-300 border border-transparent hover:border-gray-100">
+                        <div class="flex items-center justify-center w-10 h-10 bg-blue-50 rounded-full mb-3
+                                    group-hover:bg-blue-100 transition-colors duration-200">
+                        <i class="fa-solid fa-chart-line text-blue-600"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-1">Statistics</h3>
+                        <p class="text-sm text-gray-500">กราฟ & สถิติย้อนหลัง</p>
+                    </a>
+
+                    <a href="#" data-view="notifications"
+                        class="group block bg-white p-5 rounded-xl shadow hover:shadow-lg transform hover:-translate-y-1 
+                                transition-all duration-300 border border-transparent hover:border-gray-100">
+                        <div class="flex items-center justify-center w-10 h-10 bg-red-50 rounded-full mb-3
+                                    group-hover:bg-red-100 transition-colors duration-200">
+                        <i class="fa-solid fa-bell text-red-600"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-1">Notifications</h3>
+                        <p class="text-sm text-gray-500">แจ้งเตือน & Email</p>
+                    </a>
+
+                    <a href="#" data-view="export"
+                        class="group block bg-white p-5 rounded-xl shadow hover:shadow-lg transform hover:-translate-y-1 
+                                transition-all duration-300 border border-transparent hover:border-gray-100">
+                        <div class="flex items-center justify-center w-10 h-10 bg-teal-50 rounded-full mb-3
+                                    group-hover:bg-teal-100 transition-colors duration-200">
+                        <i class="fa-solid fa-file-export text-teal-600"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-1">Export Data</h3>
+                        <p class="text-sm text-gray-500">ดาวน์โหลด CSV / XLSX</p>
+                    </a>
+
+                    <a href="#" data-view="settings"
+                        class="group block bg-white p-5 rounded-xl shadow hover:shadow-lg transform hover:-translate-y-1 
+                                transition-all duration-300 border border-transparent hover:border-gray-100">
+                        <div class="flex items-center justify-center w-10 h-10 bg-gray-50 rounded-full mb-3
+                                    group-hover:bg-gray-100 transition-colors duration-200">
+                        <i class="fa-solid fa-gear text-gray-600"></i>
+                        </div>
+                        <h3 class="text-lg font-semibold text-gray-800 mb-1">Settings</h3>
+                        <p class="text-sm text-gray-500">สิทธิ์ & Dark Mode</p>
+                    </a>
+                    </div>
+                </div>
+                </div>
+
+                <!-- =================== View: Staffs (Refactored for Professional Look) =================== -->
+                <div id="view-staffs" class="hidden-view staffs-container">
+                    <!-- Top Bar: Search, User Profile, Dark Mode Toggle -->
+                    <div class="staffs-top-bar">
+                        <div class="search-section">
+                            <div class="search-input-wrapper">
+                                <img src="img/ค้นหา.svg" alt="Search Icon" class="search-icon-svg" />
+                                <input type="text" placeholder="Search" class="search-input" id="staff-search-input" />
+                            </div>
+                        </div>
+                        <div class="user-profile-section">
+                            <img src="img/dark-mode 1.svg" alt="Toggle Dark Mode" class="dark-mode-toggle" />
+                            <div class="user-info">
+                                <span id="staffs-top-user-name" class="user-name">User Name Profile</span>
+                                <span id="staffs-top-user-role" class="user-role">Assistant : Admin</span>
+                            </div>
+                            <img id="staffs-top-user-avatar" src="img/Ellipse 1.svg" alt="User Avatar" class="user-avatar" />
+                        </div>
+                    </div>
+
+                    <!-- Main Content Area -->
+                    <div class="staffs-main-content">
+                        <!-- Table Header -->
+                        <div class="staffs-table-header">
+                            <div class="header-column col-index">
+                                <img src="img/f7_list-number.svg" alt="No." class="header-icon" />
+                                <span class="header-text">#</span>
+                            </div>
+                            <div class="header-column col-staff-id">
+                                <img src="img/idcard-icon.svg" alt="Staff ID" class="header-icon" />
+                                <span class="header-text">Staff ID</span>
+                            </div>
+                            <div class="header-column col-name">
+                                <img src="img/Vector-2.svg" alt="Name" class="header-icon" />
+                                <span class="header-text">Name</span>
+                            </div>
+                            <div class="header-column col-email">
+                                <img src="img/ic_round-email.svg" alt="E-mail" class="header-icon" />
+                                <span class="header-text">E-mail</span>
+                            </div>
+                            <div class="header-column col-status">
+                                <img src="img/Vector-3.svg" alt="Status" class="header-icon" />
+                                <span class="header-text">Status</span>
+                            </div>
+                            <div class="header-column col-project">
+                                <img src="img/eos-icons_project.svg" alt="Project Name" class="header-icon" />
+                                <span class="header-text">Project Name</span>
+                            </div>
+                            <div class="header-column col-platform">
+                                <img src="img/Group 2.svg" alt="Platform" class="header-icon" />
+                                <span class="header-text">Platform</span>
+                            </div>
+                            <div class="header-column col-role">
+                                <img src="img/bx_user-pin.svg" alt="Role" class="header-icon" />
+                                <span class="header-text">Role</span>
+                            </div>
+                            <div class="header-column col-action">
+                                <img src="img/icon-park-solid_setting-two.svg" alt="Action" class="header-icon" />
+                                <span class="header-text">Action</span>
+                            </div>
+                        </div>
+
+                        <!-- Table Body -->
+                        <div id="staff-table-body" class="staffs-table-body">
+                            <!-- dynamic rows will be injected here -->
+                        </div>
+
+                        <!-- Table Footer / Pagination -->
+                        <div class="staffs-table-footer">
+                            <div class="showing-info">Showing 1-100</div>
+                            <div class="pagination-controls">
+                                <button class="pagination-btn"><img src="img/aorrow1.svg" alt="Prev" class="arrow-icon prev" /></button>
+                                <button class="pagination-btn"><img src="img/aorrow1.svg" alt="Next" class="arrow-icon next" /></button>
+                            </div>
+                            <div class="see-all-info">
+                                <span>See All</span>
+                                <img src="img/Vector-3.svg" alt="See All Arrow" class="see-all-arrow" />
+                            </div>
+                        </div>
+
+                        <!-- ✅ TEMPLATE ROW -->
+                        <template id="staff-row-template">
+                            <div class="staff-data-row staff-table-row">
+                                <div class="cell col-index" data-field="index"></div>
+                                <div class="cell col-staff-id" data-field="staff-id"></div>
+                                <div class="cell col-name">
+                                    <img class="staff-avatar" data-field="avatar" src="" alt="Staff Avatar" />
+                                    <div class="editable-cell" data-field="name" contenteditable="true"></div>
+                                </div>
+                                <div class="cell col-email">
+                                    <div class="editable-cell" data-field="email" contenteditable="true"></div>
+                                </div>
+                                <div class="cell col-status">
+                                    <button class="status-pill" data-field="status-toggle">
+                                        <i data-field="status-icon"></i>
+                                        <span data-field="status-text"></span>
+                                    </button>
+                                </div>
+                                <div class="cell col-project" data-field="project"></div>
+                                <div class="cell col-platform">
+                                    <div class="platform-btn-group" data-field="platforms"></div>
+                                </div>
+                                <div class="cell col-role">
+                                    <select class="role-selector" data-field="role-select">
+                                        <option value="Admin">Admin</option>
+                                        <option value="User">User</option>
+                                    </select>
+                                </div>
+                                <div class="cell col-action">
+                                    <button class="action-menu-btn"><i class="fa-solid fa-ellipsis-vertical"></i></button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <!-- =================== View: Leaves (FIXED) =================== -->
+                <div id="view-leaves" class="view hidden-view px-8 py-6">
+                    <div class="top-right-user-profile">
+                        <i class="fas fa-bell"></i>
+                        <span class="user-info">
+                            <span class="user-name">User Name</span>
+                            <span class="user-role">Assistant. admin</span>
+                        </span>
+                        <img src="https://placehold.co/40x40/FF7F50/FFFFFF?text=AV" alt="User Avatar" class="user-avatar">
+                    </div>
+
+                    <div class="main-content-wrapper">
+                        <div class="leaves-management-header">
+                            <span class="date-text-header" id="current-date-display">ส่งคลิปประจำวันที่ xx/xxxx</span>
+                            <div class="leaves-actions">
+                                <div class="search-leaves-box">
+                                    <input type="text" placeholder="Search leaves...">
+                                    <i class="fas fa-search"></i>
+                                </div>
+                                <a href="#" data-view="monthly-summary" class="summary-btn">ภาพรวมทั้งเดือน</a>
+                                <button class="summary-btn">ปฏิทิน</button>
+                                <button class="add-new-leaves-btn">+ Add New Leaves</button>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            
+                            <table class="leaves-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>NAME</th>
+                                        <th>Project Name</th>
+                                        <th>คลิปต่อวัน</th>
+                                        <th>สถานะการส่ง</th>
+                                        <th>Platform</th>
+                                        <th>เป้าต่อเดือน</th>
+                                        <th>จำนวนส่งปัจจุบัน</th>
+                                        <th>วันหยุดคงเหลือ</th>
+                                        <th>จำนวนวันหยุด</th>
+                                        <th>ส่งงานไม่ครบ/วัน</th>
+                                        <th>ACTION</th>
+                                    </tr>
+                                </thead>
+                                <!-- ***** จุดที่แก้ไข: ลบข้อมูลเก่าออก และใส่ ID ให้ tbody ***** -->
+                                <tbody id="leaves-table-body">
+                                    <!-- JavaScript จะมาเติมข้อมูลจริงที่นี่ -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =================== View: Monthly Summary (Calendar View) =================== -->
+                <div id="view-monthly-summary" class="view hidden-view py-6">
+                    <div class="top-right-user-profile">
+                        <i class="fas fa-bell"></i>
+                        <span class="user-info">
+                            <span class="user-name">User Name</span>
+                            <span class="user-role">Assistant. admin</span>
+                        </span>
+                        <img src="https://placehold.co/40x40/FF7F50/FFFFFF?text=AV" alt="User Avatar" class="user-avatar">
+                    </div>
+
+                    <div class="main-content-wrapper">
+                        <div class="detail-header">
+                            <div class="header-gradient-bg">
+                                <h1 id="monthly-summary-title">ภาพรวมการส่งคลิปประจำเดือน: กรกฎาคม 2025</h1>
+                                <p class="monthly-subtitle">ตารางแสดงสถานะการส่งคลิปของทุกคนในแต่ละวัน</p>
+                            </div>
+                            <div class="month-year-selector" style="margin-top: 20px;">
+                                <label for="select-month">เลือกเดือน:</label>
+                                <select id="select-month" class="summary-btn" style="background-color: #6c757d;">
+                                    <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option><option value="3">มีนาคม</option><option value="4">เมษายน</option><option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option><option value="7" selected>กรกฎาคม</option><option value="8">สิงหาคม</option><option value="9">กันยายน</option><option value="10">ตุลาคม</option><option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+                                </select>
+                                <label for="select-year" style="margin-left: 15px;">ปี:</label>
+                                <select id="select-year" class="summary-btn" style="background-color: #6c757d;">
+                                    <option value="2024">2024</option><option value="2025" selected>2025</option><option value="2026">2026</option>
+                                </select>
+                                <button id="view-summary-data-btn" class="summary-btn" style="background-color: #28a745; margin-left: 15px;">ดูข้อมูล</button>
+                            </div>
+                        </div>
+
+                        <div class="daily-calendar-container">
+                            <table class="monthly-all-summary-table">
+                                <thead>
+                                    <tr id="all-summary-header-row">
+                                        <th class="sticky-col-header">Project Name</th>
+                                        <th class="sticky-col-header">Name</th>
+                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+                                        <th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th><th>18</th><th>19</th><th>20</th>
+                                        <th>21</th><th>22</th><th>23</th><th>24</th><th>25</th><th>26</th><th>27</th><th>28</th><th>29</th><th>30</th>
+                                        <th>31</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="all-summary-tbody">
+                                    <!-- JavaScript will populate this -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 16px;">
+                            <a href="#" data-view="leaves" class="back-to-main-btn">กลับสู่หน้าหลัก</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- =================== View: Summary Detail (Individual View) =================== -->
+                <div id="view-summary-detail" class="view hidden-view px-8 py-6">
+                    <div class="top-right-user-profile">
+                        <i class="fas fa-bell"></i>
+                        <span class="user-info">
+                            <span class="user-name">User Name</span>
+                            <span class="user-role">Assistant. admin</span>
+                        </span>
+                        <img src="https://placehold.co/40x40/FF7F50/FFFFFF?text=AV" alt="User Avatar" class="user-avatar">
+                    </div>
+
+                    <div class="main-content-wrapper">
+                        <div class="detail-header">
+                            <div class="header-gradient-top"></div>
+                            <h1 id="summary-title">กำลังโหลดภาพรวม...</h1>
+                            <div class="summary-description-bar">
+                                <p id="summary-description">ภาพรวมการส่งคลิปประจำเดือนของ <span id="user-name-display"></span></p>
+                            </div>
+                        </div>
+
+                        <div class="summary-dashboard" id="summary-dashboard-area">
+                            <div class="summary-card">
+                                <h3>ยอดรวมคลิปที่ส่ง</h3>
+                                <p id="total-clips">0 คลิป</p>
+                            </div>
+                            <div class="summary-card">
+                                <h3>จำนวนครั้งขาดส่ง</h3>
+                                <p id="total-missing">0 ครั้ง</p>
+                            </div>
+                            <div class="summary-card">
+                                <h3>วันหยุดที่ใช้ไป</h3>
+                                <p id="total-holidays">0 วัน</p>
+                            </div>
+                            <div class="summary-card">
+                                <h3>ยอดวิวรวมทั้งเดือน</h3>
+                                <p id="total-views">0 วิว</p>
+                            </div>
+                        </div>
+
+                        <div class="daily-calendar-container">
+                            <table class="daily-calendar-table">
+                                <thead>
+                                    <tr id="calendar-header-row">
+                                        <th>รายการ / วันที่</th> 
+                                        <th>1</th><th>2</th><th>3</th><th>4</th><th>5</th><th>6</th><th>7</th><th>8</th><th>9</th><th>10</th>
+                                        <th>11</th><th>12</th><th>13</th><th>14</th><th>15</th><th>16</th><th>17</th><th>18</th><th>19</th><th>20</th>
+                                        <th>21</th><th>22</th><th>23</th><th>24</th><th>25</th><th>26</th><th>27</th><th>28</th><th>29</th><th>30</th>
+                                        <th>31</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="calendar-tbody">
+                                    <!-- JavaScript will populate this -->
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div style="text-align: center; margin-top: 30px;">
+                            <a href="#" data-view="leaves" class="back-to-main-btn">กลับสู่หน้าหลัก</a>
+                        </div>
+                    </div>
+                </div>
+
+                    <!-- =================== View: Salary =================== -->
+                    <div id="view-salary" class="hidden-view px-8 py-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Salary Management</h2>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <p class="text-gray-700 mb-4">หน้านี้จะแสดงข้อมูลเงินเดือนพนักงาน, การคำนวณ, และการจัดการการจ่ายเงิน</p>
+                        <ul class="list-disc list-inside text-gray-600 space-y-2">
+                            <li>แสดงสรุปเงินเดือนรายบุคคลและรายเดือน</li>
+                            <li>บันทึกการจ่ายเงินและสถานะการจ่าย</li>
+                            <li>สร้างรายงานเงินเดือน (Payroll reports)</li>
+                            <li>ฟังก์ชัน Export ข้อมูลเงินเดือนเป็น CSV/Excel</li>
+                        </ul>
+                        <div class="mt-6 text-center">
+                            <i class="fa-solid fa-hourglass-half text-5xl text-yellow-500 mb-4"></i>
+                            <p class="text-lg font-semibold text-gray-800">กำลังพัฒนาฟังก์ชันนี้อยู่ โปรดอดใจรอ!</p>
+                        </div>
+                    </div>
+                    </div>
+
+                    <!-- =================== View: Stats =================== -->
+                    <div id="view-stats" class="view hidden-view">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Statistics & Analytics</h2>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <p class="text-gray-700 mb-4">หน้านี้จะแสดงสถิติและกราฟวิเคราะห์ประสิทธิภาพการทำงานของพนักงานและโปรเจกต์</p>
+                        <ul class="list-disc list-inside text-gray-600 space-y-2">
+                            <li>กราฟยอดวิวรวมของแต่ละแพลตฟอร์ม</li>
+                            <li>สถิติการส่งงานครบ/ขาดส่งของพนักงานแต่ละคน</li>
+                            <li>แนวโน้มประสิทธิภาพการทำงานรายเดือน/รายไตรมาส</li>
+                            <li>ข้อมูลเชิงลึกเพื่อการตัดสินใจ</li>
+                        </ul>
+                        <div class="mt-6 text-center">
+                            <i class="fa-solid fa-chart-pie text-5xl text-blue-500 mb-4"></i>
+                            <p class="text-lg font-semibold text-gray-800">ส่วนแสดงสถิติกำลังจะมาเร็วๆ นี้!</p>
+                        </div>
+                    </div>
+                    </div>
+
+                    <!-- =================== View: Notifications =================== -->
+                    <div id="view-notifications" class="hidden-view px-8 py-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Notifications & Alerts</h2>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <p class="text-gray-700 mb-4">หน้านี้จะแสดงการแจ้งเตือนต่างๆ ที่เกี่ยวข้องกับระบบและกิจกรรมของคุณ</p>
+                        <ul class="list-disc list-inside text-gray-600 space-y-2">
+                            <li>แจ้งเตือนการอนุมัติ/ปฏิเสธการลา</li>
+                            <li>แจ้งเตือนการอัปเดตข้อมูลสำคัญ</li>
+                            <li>ข้อความจากผู้ดูแลระบบ</li>
+                            <li>การแจ้งเตือนอัตโนมัติ (เช่น วันเกิดพนักงาน)</li>
+                        </ul>
+                        <div class="mt-6 text-center">
+                            <i class="fa-solid fa-inbox text-5xl text-red-500 mb-4"></i>
+                            <p class="text-lg font-semibold text-gray-800">กล่องข้อความแจ้งเตือนของคุณจะปรากฏที่นี่!</p>
+                        </div>
+                    </div>
+                    </div>
+
+                    <!-- =================== View: Export Data =================== -->
+                    <div id="view-export" class="hidden-view px-8 py-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Data Export</h2>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <p class="text-gray-700 mb-4">หน้านี้ช่วยให้คุณสามารถส่งออกข้อมูลต่างๆ จากระบบได้ในรูปแบบที่หลากหลาย</p>
+                        <ul class="list-disc list-inside text-gray-600 space-y-2">
+                            <li>เลือกช่วงวันที่สำหรับข้อมูลที่ต้องการ Export</li>
+                            <li>เลือกประเภทข้อมูลที่ต้องการ (เช่น ข้อมูลการส่งงาน, ข้อมูลพนักงาน)</li>
+                            <li>เลือกรูปแบบไฟล์ที่ต้องการ (เช่น CSV, XLSX)</li>
+                            <li>ดาวน์โหลดไฟล์ได้ทันที</li>
+                        </ul>
+                        <div class="mt-6 text-center">
+                            <i class="fa-solid fa-cloud-arrow-down text-5xl text-teal-500 mb-4"></i>
+                            <p class="text-lg font-semibold text-gray-800">เตรียมพร้อมสำหรับ Export ข้อมูลของคุณ!</p>
+                        </div>
+                    </div>
+                    </div>
+
+                    <!-- =================== View: Settings =================== -->
+                    <div id="view-settings" class="hidden-view px-8 py-6">
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Application Settings</h2>
+                    <div class="bg-white p-6 rounded-xl shadow-md">
+                        <p class="text-gray-700 mb-4">หน้านี้สำหรับการตั้งค่าทั่วไปของโปรแกรมและสิทธิ์การใช้งาน</p>
+                        <ul class="list-disc list-inside text-gray-600 space-y-2">
+                            <li>จัดการสิทธิ์ผู้ใช้งานและบทบาท</li>
+                            <li>ตั้งค่าการแจ้งเตือน (Notification preferences)</li>
+                            <li>เลือกธีมสี (เช่น Light/Dark Mode)</li>
+                            <li>การตั้งค่าการเชื่อมต่อ API (สำหรับผู้ดูแลระบบ)</li>
+                        </ul>
+                        <div class="mt-6 text-center">
+                            <i class="fa-solid fa-sliders text-5xl text-gray-500 mb-4"></i>
+                            <p class="text-lg font-semibold text-gray-800">ปรับแต่งประสบการณ์ใช้งานของคุณที่นี่!</p>
+                        </div>
+                    </div>
+                    </div>
+
+                    </div>
+                </div>
+
+                        
+                    </div>
+                    </div>
+    </div>
+
+
+    <!-- =================== View: Log Out Content (Moved Outside App Container) =================== -->
+    <div id="log-out-content" class="ppp-tab-content" style="display: none;">
+        <div class="log-out-wrapper">
+            <i class="fas fa-check-circle log-out-icon"></i>
+            <h2 class="log-out-title">คุณได้ออกจากระบบแล้ว</h2>
+            <p class="log-out-message">โปรดเข้าสู่ระบบอีกครั้งเพื่อใช้งานต่อ</p>
+            <button class="btn btn-primary log-in-again-btn">เข้าสู่ระบบอีกครั้ง</button>
+        </div>
+    </div>
+
+    <!-- =================== View: Login =================== -->
+
+    <!-- =================== View: Login (NEW UI) =================== -->
+    <div id="view-login" class="login-page">
+        <div class="login-page-background"></div>
+        <div class="login-container">
+            <div class="login-avatar-container">
+                <i class="fas fa-user login-avatar-icon"></i>
+            </div>
+            <h1 class="login-title">เข้าสู่ระบบ</h1>
+            <p class="login-subtitle">กรุณากรอกอีเมลของคุณเพื่อดำเนินการต่อ</p>
+            <div class="form-group" id="email-form-group">
+                <label for="login-email-input">อีเมล</label>
+                <div class="input-wrapper">
+                    <i class="fas fa-envelope prefix-icon"></i>
+                    <input type="email" id="login-email-input" placeholder="กรอกอีเมลของคุณ">
+                </div>
+                <div class="error-message" id="email-error-message" style="display: none;"></div>
+            </div>
+            <div class="options-row">
+                <label class="remember-me">
+                    <input type="checkbox" id="remember-me">
+                    <span class="custom-checkbox"></span>
+                    จดจำฉันไว้
+                </label>
+                <a href="#" class="forgot-password">ลืมรหัสผ่าน?</a>
+            </div>
+            <div id="email-status-container" style="display: none; margin-bottom: 15px;">
+                <div class="email-status-message" id="email-status-message"></div>
+                <button id="resend-link-button" class="resend-link-button" style="display: none;">ส่งซ้ำ</button>
+            </div>
+            <button id="login-btn" class="login-button">ดำเนินการต่อ</button>
+            <p class="signup-text">ยังไม่มีบัญชีใช่ไหม? <a href="#" class="signup-link">สมัครสมาชิก</a></p>
+            <p class="credit-text">พัฒนาโดย QTP V.2</p>
+            <div id="login-status-message" class="login-status-message" style="display: none;"></div>
+        </div>
+    </div>
+
+    <!-- .hidden-view style อยู่ใน <head> แล้ว ไม่ต้องซ้ำ -->
+
+
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- Flatpickr JS -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <!-- YOUR APP JS -->
+    <!-- Profile Picture Selection Modal -->
+    <div id="profile-pic-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>เลือกรูปโปรไฟล์</h2>
+            <div id="profile-pic-grid" class="profile-pic-grid">
+                <!-- Images will be loaded here by JavaScript -->
+            </div>
+            <input type="hidden" id="selected-profile-pic">
+            <button id="save-profile-pic-btn" class="btn btn-primary">บันทึกรูปโปรไฟล์</button>
+        </div>
+    </div>
+
+    <script src="static/js/rcp_app.js"></script> <!-- เพิ่มตรงนี้ -->
+    <script src="static/js/summary_views.js"></script>
+    
+</body>
+</html>
