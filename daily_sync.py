@@ -4,12 +4,14 @@ from datetime import datetime, timedelta, timezone # <<< ตรวจสอบ�
 import traceback
 import re
 from google.api_core.exceptions import GoogleAPIError 
+import sys # <<< ตรวจสอบว่ามีบรรทัดนี้
 
 # --- การตั้งค่าหลัก ---
 MASTER_SHEET_URL = "https://docs.google.com/spreadsheets/d/17lOtuHum9VHdukfHr7143uCGydVZSaJNi2RhzGfh81g/edit#gid=0"
 STAFFS_SHEET_NAME = "Staffs"
 TRANSACTION_SHEET_NAME = "Transaction"
 CONFIG_SHEET_NAME = "Config"
+LOCK_CELL = "L2" # หรือเซลล์อื่นที่ว่างในชีต Config
 
 # --- Retry settings ---
 MAX_RETRIES = 5
@@ -55,12 +57,32 @@ def append_and_format_separator(sheet, text, bg_color, text_color, num_cols_to_m
     time.sleep(0.5)
 
 def get_target_date_and_mode():
+    """
+    ตรวจสอบว่ามีการสั่งงานด้วย date แบบเจาะจงหรือไม่
+    ถ้าไม่มี ให้ใช้ Logic เวลาอัตโนมัติแบบเดิม
+    """
+    # ตรวจสอบ command-line arguments สำหรับ --date
+    if '--date' in sys.argv:
+        try:
+            date_index = sys.argv.index('--date') + 1
+            date_str = sys.argv[date_index]
+            # แปลง format dd/mm/yyyy เป็น object date
+            target_date = datetime.strptime(date_str, '%d/%m/%Y')
+            print(f"🎯 โหมด: บังคับเลือกวัน (Manual Override) | วันที่เป้าหมาย: {target_date.strftime('%d/%m/%Y')}")
+            return target_date
+        except (ValueError, IndexError):
+            print("    ⚠️ รูปแบบวันที่ในคำสั่ง --date ไม่ถูกต้อง (ต้องเป็น dd/mm/yyyy), จะใช้โหมดอัตโนมัติแทน")
+            pass
+
+    # ถ้าไม่มี --date ให้ใช้ Logic เวลาอัตโนมัติเดิมของลูกพี่
     now_utc = datetime.now(timezone.utc)
     now_bkk = now_utc + timedelta(hours=7)
     if now_bkk.hour == 0:
-        target_date = now_bkk - timedelta(days=1); print(f"🎯 โหมด: เก็บตกท้ายวัน (Reconciliation) | วันที่เป้าหมาย: {target_date.strftime('%d/%m/%Y')}")
+        target_date = now_bkk - timedelta(days=1)
+        print(f"🎯 โหมด: เก็บตกท้ายวัน (Reconciliation) | วันที่เป้าหมาย: {target_date.strftime('%d/%m/%Y')}")
     else:
-        target_date = now_bkk; print(f"🎯 โหมด: อัปเดตรายชั่วโมง (Hourly) | วันที่เป้าหมาย: {target_date.strftime('%d/%m/%Y')}")
+        target_date = now_bkk
+        print(f"🎯 โหมด: อัปเดตรายชั่วโมง (Hourly) | วันที่เป้าหมาย: {target_date.strftime('%d/%m/%Y')}")
     return target_date
 
 def delete_date_block(sheet, date_str_for_header):
@@ -102,6 +124,20 @@ def run_auto_sync():
 
         client = g_sheet_api.get_gspread_client()
         master_workbook = retry_api_call(client.open_by_url, MASTER_SHEET_URL)
+        config_sheet = retry_api_call(master_workbook.worksheet, CONFIG_SHEET_NAME)
+
+        # --- [จุดตรวจสอบสถานะของ Python] ---
+        print(f"🔍 ตรวจสอบสถานะที่เซลล์ {LOCK_CELL}...")
+        current_status = retry_api_call(config_sheet.acell, LOCK_CELL).value
+        if current_status == "RUNNING":
+            print("❌ ข้ามการทำงาน: พบสถานะ 'RUNNING' อยู่ในระบบ อาจมีสคริปต์อื่นทำงานอยู่")
+            return # ออกจากการทำงานทันที
+        
+        # --- แขวนป้าย "RUNNING" ---
+        retry_api_call(config_sheet.update_acell, LOCK_CELL, "RUNNING")
+        print(f"🟢 แขวนป้าย 'RUNNING' ที่เซลล์ {LOCK_CELL} เรียบร้อย")  
+        
+
         print("📥 กำลังโหลดข้อมูล Staffs และ Config...")
         staffs_sheet, config_sheet = (retry_api_call(master_workbook.worksheet, name) for name in [STAFFS_SHEET_NAME, CONFIG_SHEET_NAME])
         all_staffs, project_configs = get_sheet_data_as_objects(staffs_sheet), {conf.get('ConfigType','').strip(): conf for conf in get_sheet_data_as_objects(config_sheet) if conf.get('ConfigType')}
@@ -244,4 +280,33 @@ def run_auto_sync():
     time.sleep(1) 
 
 if __name__ == '__main__':
-    run_auto_sync()
+    # กำหนดค่าคงที่สำหรับ "เก็บป้าย" โดยเฉพาะ
+    LOCK_CELL = "L2" 
+    CONFIG_SHEET_NAME = "Config"
+    
+    g_sheet_client = None
+    config_sheet_main = None
+    master_workbook_main = None
+
+    try:
+        # สั่งให้ฟังก์ชันหลักทำงาน
+        run_auto_sync()
+    except Exception as main_exc:
+        # ดักจับ Error ที่อาจจะหลุดออกมา
+        print(f"--- 🔴 สคริปต์หยุดทำงานเนื่องจากมีข้อผิดพลาดร้ายแรง: {main_exc} ---")
+    finally:
+        # ไม่ว่าโปรแกรมจะทำงานสำเร็จหรือล้มเหลว
+        # โค้ดส่วนนี้จะทำงาน "สุดท้ายเสมอ" เพื่อเก็บป้าย
+        print("\n--- 🏁 จบการทำงานทั้งหมด กำลังเก็บป้ายสถานะ ---")
+        try:
+            # เชื่อมต่อ API ใหม่อีกครั้ง
+            g_sheet_client = g_sheet_api.get_gspread_client()
+            master_workbook_main = retry_api_call(g_sheet_client.open_by_url, MASTER_SHEET_URL) # <<< แก้ไข: เรียกใช้ retry_api_call ตรงๆ
+            config_sheet_main = retry_api_call(master_workbook_main.worksheet, CONFIG_SHEET_NAME) # <<< แก้ไข: เรียกใช้ retry_api_call ตรงๆ
+
+            # สั่งอัปเดตเซลล์เพื่อเก็บป้าย
+            retry_api_call(config_sheet_main.update_acell, LOCK_CELL, "IDLE") # <<< แก้ไข: เรียกใช้ retry_api_call ตรงๆ
+            print(f"⚪️ เก็บป้าย กลับสู่สถานะ 'IDLE' ที่เซลล์ {LOCK_CELL} เรียบร้อยแล้ว")
+
+        except Exception as e_final:
+            print(f"    ❌ เกิดข้อผิดพลาดตอนพยายามเก็บป้ายครั้งสุดท้าย: {e_final}")

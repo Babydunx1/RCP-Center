@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RCP Center - Employee Dashboard Mockup</title>
+    <link rel="stylesheet" href="mockup.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+<body>
+
+    <div class="epd-dashboard-container">
+        <aside class="epd-employee-sidebar">
+            <div class="epd-sidebar-header">
+                <h3>พนักงานทั้งหมด (25)</h3>
+                <div class="epd-search-wrapper">
+                    <i class="fas fa-search"></i>
+                    <input type="text" placeholder="ค้นหาชื่อพนักงาน...">
+                </div>
+            </div>
+            <ul class="epd-employee-list">
+                <li class="epd-employee-card active">
+                    <img src="https://i.pravatar.cc/40?u=emp1" alt="Avatar">
+                    <div class="epd-employee-info">
+                        <span class="epd-employee-name">นายสมชาย ใจดี</span>
+                        <span class="epd-employee-project">Project Q</span>
+                    </div>
+                    <span class="epd-status-dot online"></span>
+                </li>
+                <li class="epd-employee-card">
+                    <img src="https://i.pravatar.cc/40?u=emp2" alt="Avatar">
+                    <div class="epd-employee-info">
+                        <span class="epd-employee-name">นางสาวสมศรี มีสุข</span>
+                        <span class="epd-employee-project">Project T.</span>
+                    </div>
+                    <span class="epd-status-dot online"></span>
+                </li>
+                <li class="epd-employee-card">
+                    <img src="https://i.pravatar.cc/40?u=emp3" alt="Avatar">
+                    <div class="epd-employee-info">
+                        <span class="epd-employee-name">นายมานะ บากบั่น</span>
+                        <span class="epd-employee-project">Project H.</span>
+                    </div>
+                    <span class="epd-status-dot offline"></span>
+                </li>
+                </ul>
+        </aside>
+
+        <main class="epd-main-content">
+            <header class="epd-main-header">
+                <h1 id="epd-employee-main-name">ภาพรวมของ: นายสมชาย ใจดี</h1>
+
+                <div class="epd-date-picker-wrapper">
+                    <input type="text" id="epd-date-picker" placeholder="เลือกวันที่...">
+                </div>
+            </header>
+            
+            <nav class="epd-tabs">
+                <button class="epd-tab-button active" data-tab="overview">
+                    <i class="fas fa-chart-pie"></i> ภาพรวม
+                </button>
+                <button class="epd-tab-button" data-tab="pages">
+                    <i class="fas fa-file-alt"></i> จัดการเพจ
+                </button>
+                <button class="epd-tab-button" data-tab="leaves">
+                    <i class="fas fa-calendar-alt"></i> จัดการการลางาน
+                </button>
+            </nav>
+
+            <div class="epd-tab-content-wrapper">
+                <div id="tab-overview" class="epd-tab-content active">
+                    <div class="epd-kpi-grid">
+                        <div class="epd-kpi-card">
+                            <i class="fas fa-file-invoice-dollar icon-bg"></i>
+                            <span class="epd-kpi-title">จำนวนเพจที่ดูแล</span>
+                            <span class="epd-kpi-value">20</span>
+                        </div>
+                        <div class="epd-kpi-card">
+                            <i class="fas fa-check-circle icon-bg"></i>
+                            <span class="epd-kpi-title">สถานะส่งงานวันนี้</span>
+                            <span class="epd-kpi-value text-green">ส่งครบ</span>
+                        </div>
+                        <div class="epd-kpi-card">
+                             <i class="fas fa-eye icon-bg"></i>
+                            <span class="epd-kpi-title">ยอดวิวรวมวันนี้</span>
+                            <span class="epd-kpi-value">1,250,000</span>
+                        </div>
+                        <div class="epd-kpi-card">
+                            <i class="fas fa-calendar-check icon-bg"></i>
+                            <span class="epd-kpi-title">สถานะการลาวันนี้</span>
+                            <span class="epd-kpi-value">ปกติ</span>
+                        </div>
+                    </div>
+                    <div class="epd-chart-container">
+                         <h2>ประสิทธิภาพย้อนหลัง 7 วัน (จำนวนคลิป)</h2>
+                         <img src="https://placehold.co/600x250/E9EEF6/4A5568?text=Chart+Placeholder" alt="Chart Placeholder" style="width: 100%; border-radius: 8px;">
+                    </div>
+                </div>
+
+                <div id="tab-pages" class="epd-tab-content">
+                    <div class="epd-page-grid">
+
+                        <div class="epd-page-card">
+                            <i class="fab fa-facebook-square platform-icon fb"></i>
+                            <div class="epd-page-details">
+                                <h4 class="epd-page-name">ข่าวสดบันเทิง</h4>
+                                <a href="#" class="epd-page-link" target="_blank">instagram.com/kaosod_entertainment</a>
+                            </div>
+                            <div class="epd-page-status-wrapper">
+                                <span class="epd-page-status complete">ส่งครบ 2/2</span>
+                            </div>
+                        </div>
+
+                        <div class="epd-page-card">
+                            <i class="fab fa-instagram platform-icon ig"></i>
+                            <div class="epd-page-details">
+                                <h4 class="epd-page-name">ไอจีรวมมิตรดารา</h4>
+                                <a href="#" class="epd-page-link" target="_blank">instagram.com/dara_update</a>
+                            </div>
+                            <div class="epd-page-status-wrapper">
+                                <span class="epd-page-status pending">ส่งแล้ว 1/2</span>
+                            </div>
+                        </div>
+
+                        <div class="epd-page-card">
+                            <i class="fab fa-facebook-square platform-icon fb"></i>
+                            <div class="epd-page-details">
+                                <h4 class="epd-page-name">เพจสายมูเตลู</h4>
+                                <a href="#" class="epd-page-link" target="_blank">instagram.com/moo_talu_world</a>
+                            </div>
+                            <div class="epd-page-status-wrapper">
+                                <span class="epd-page-status missing">ยังไม่ส่ง 0/2</span>
+                            </div>
+                        </div>
+
+                        <div class="epd-page-card">
+                            <i class="fab fa-instagram platform-icon ig"></i>
+                            <div class="epd-page-details">
+                                <h4 class="epd-page-name">รีวิวของกินอร่อย</h4>
+                                <a href="#" class="epd-page-link" target="_blank">instagram.com/gin_aroi_mak</a>
+                            </div>
+                            <div class="epd-page-status-wrapper">
+                                <span class="epd-page-status complete">ส่งครบ 2/2</span>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+
+
+                <div id="tab-leaves" class="epd-tab-content">
+                    <div class="epd-leave-request-card">
+                        <div class="epd-leave-header">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <h3>คำขอลาที่รอดำเนินการ</h3>
+                        </div>
+                        <div class="epd-leave-body">
+                            <p><strong>ประเภท:</strong> ลาป่วย</p>
+                            <p><strong>ช่วงวันที่:</strong> 16 ก.ค. 2568 - 17 ก.ค. 2568 (2 วัน)</p>
+                            <p><strong>เหตุผล:</strong> มีไข้สูง ไม่สามารถมาทำงานได้</p>
+                        </div>
+                        <div class="epd-leave-actions">
+                            <button class="epd-btn reject">ปฏิเสธ</button>
+                            <button class="epd-btn approve">อนุมัติ</button>
+                        </div>
+                    </div>
+                    <div class="epd-leave-history">
+                        <h4>ประวัติการลา</h4>
+                        <p>ยังไม่มีประวัติการลา</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="mockup.js"></script>
+</body>
+</html>

@@ -1,0 +1,862 @@
+// @ts-nocheck
+/**
+ * =================================================================
+ * ✅ ส่วนตั้งค่าแถวคั่น (ลูกพี่ปรับแต่งทุกอย่างได้ที่นี่) ✅
+ * =================================================================
+ */
+const SEPARATOR_CONFIG = {
+  // กำหนดว่าจะให้แถบคั่นยาวตั้งแต่คอลัมน์ไหนถึงไหน (A=1, B=2, ..., R=18)
+  columnStart: 1,  // คอลัมน์ A
+  columnEnd: 18,   // คอลัมน์ R
+
+  // --- การตั้งค่าแถบคั่น "เดือน" ---
+  monthSeparator: {
+    enabled: true,
+    textPrefix: '--- เดือน ',
+    textSuffix: ' ---',
+    backgroundColor: '#4682B4', // สีพื้นหลังแถบเดือน (SteelBlue)
+    fontColor: '#FFFFFF',
+    fontWeight: 'bold',
+    fontSize: 12,
+    addExtraBlankRow: true // เพิ่มแถวว่าง "ก่อน" และ "หลัง" แถบเดือน
+  },
+
+  // --- การตั้งค่าแถบคั่น "ระหว่างวัน" ---
+  daySeparator: {
+    enabled: true,
+    backgroundColor: '#F0F8FF' // สีพื้นหลังแถบคั่นวัน (AliceBlue)
+  }
+};
+
+
+/**
+ * ฟังก์ชันหลักที่ถูกเรียกจากเมนู (เวอร์ชันปรับปรุงความเร็วและ Dropdown)
+ */
+function updateDateAndNoColumnsOnly() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getActiveSheet();
+  const sheetName = sheet.getName();
+
+  const rowsPerDay = 30;
+  const ui = SpreadsheetApp.getUi();
+
+  const headerCheck = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  if (headerCheck.indexOf("วันที่") === -1 || headerCheck.indexOf("No.") === -1) {
+    Browser.msgBox(`คำเตือน: ไม่พบหัวข้อคอลัมน์ "วันที่" หรือ "No." ในชีต "${sheetName}" ที่กำลังเปิดอยู่ สคริปต์จะหยุดทำงานเพื่อความปลอดภัย`);
+    return;
+  }
+
+  // --- ส่วนรับ Input จาก User (เหมือนเดิมทุกประการ) ---
+  let startDateInput = ui.prompt('กำหนดวันที่เริ่มต้น (สำคัญมาก!)', 'กรุณาป้อนวันที่เริ่มต้นที่ต้องการให้ปรากฏในชีต (รูปแบบ: วัน/เดือน/ปี เช่น 1/7/2025):\n* Script จะใช้ข้อความนี้ตรงๆ ในคอลัมน์วันที่', ui.ButtonSet.OK_CANCEL);
+  if (startDateInput.getSelectedButton() === ui.Button.CANCEL) return;
+  let startDateDisplayStr = startDateInput.getResponseText();
+
+  let numDaysToCreateInput = ui.prompt('กำหนดจำนวนวันที่จะสร้าง', 'กรุณาป้อนจำนวนวันที่จะสร้างข้อมูล (เช่น 90 วัน สำหรับ 3 เดือน):', ui.ButtonSet.OK_CANCEL);
+  if (numDaysToCreateInput.getSelectedButton() === ui.Button.CANCEL) return;
+  let numDaysToCreate = parseInt(numDaysToCreateInput.getResponseText(), 10);
+
+  let startRowInput = ui.prompt('กำหนดแถวเริ่มต้น', 'กรุณาป้อนหมายเลขแถวที่จะเริ่มต้นเขียนข้อมูล (เช่น 2 ถ้าจะเริ่มใต้หัวตาราง):\n*ข้อมูลเดิมในคอลัมน์ A และ B ที่อยู่ในช่วงนี้จะถูกเขียนทับ', ui.ButtonSet.OK_CANCEL);
+  if (startRowInput.getSelectedButton() === ui.Button.CANCEL) return;
+  let startRowToWrite = parseInt(startRowInput.getResponseText(), 10);
+
+  if (isNaN(numDaysToCreate) || numDaysToCreate <= 0 || isNaN(startRowToWrite) || startRowToWrite < 1) {
+    Browser.msgBox("Error: ข้อมูลที่ป้อนไม่ถูกต้อง! โปรดตรวจสอบตัวเลขและหมายเลขแถว.");
+    return;
+  }
+  if (startRowToWrite === 1) {
+    const confirmOverwriteHeader = ui.alert('คำเตือนร้ายแรง!', 'คุณกำลังจะเขียนทับแถวที่ 1 ซึ่งเป็นหัวตาราง! คุณต้องการดำเนินการต่อหรือไม่?', ui.ButtonSet.YES_NO);
+    if (confirmOverwriteHeader === ui.Button.NO) {
+      Browser.msgBox("ยกเลิกการสร้างข้อมูล");
+      return;
+    }
+  }
+
+  function parseDateForCalculation(dateString) {
+    const parts = dateString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (!parts) return null;
+    let day = parseInt(parts[1], 10);
+    let month = parseInt(parts[2], 10);
+    let year = parseInt(parts[3], 10);
+    if (year < 100) {
+      year += (year < 50 ? 2000 : 1900);
+    }
+    return new Date(year, month - 1, day);
+  }
+
+  let currentCalcDate = parseDateForCalculation(startDateDisplayStr);
+  if (!currentCalcDate || isNaN(currentCalcDate.getTime())) {
+    Browser.msgBox("Error: ไม่สามารถแปลงวันที่เริ่มต้นเพื่อคำนวณวันถัดไปได้! โปรดตรวจสอบรูปแบบ วัน/เดือน/ปี ที่ป้อน.");
+    return;
+  }
+  currentCalcDate.setHours(0, 0, 0, 0);
+
+  const headerRowValues = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+  const dateColIdx = headerRowValues.indexOf("วันที่");
+  const noColIdx = headerRowValues.indexOf("No.");
+  const estimatedTotalWidth = headerRowValues.length > 0 ? headerRowValues.length : 18; // Fallback to 18 (R)
+
+  if (dateColIdx === -1 || noColIdx === -1) {
+    Browser.msgBox("Error: ไม่พบคอลัมน์ 'วันที่' หรือ 'No.' ในแถวหัวข้อ โปรดตรวจสอบ");
+    return;
+  }
+
+  // ✨ --- NEW: สร้าง Array เพื่อเตรียมข้อมูลทั้งหมดในครั้งเดียว --- ✨
+  const dataToWrite = [];
+  const backgroundsToWrite = [];
+  const mergesToPerform = [];
+  const fontStylesToPerform = [];
+  
+  // ✨✅ FIX: เพิ่มตัวแปรสำหรับสร้าง Dropdown ✅✨
+  const monthDropdownOptions = ['--- เลือกเดือน ---'];
+  const monthRowMap = {};
+
+  const monthNamesTh = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+  let previousMonth = currentCalcDate.getMonth();
+  let currentRowCounter = startRowToWrite;
+
+  for (let d = 0; d < numDaysToCreate; d++) {
+    let tempDate = new Date(currentCalcDate);
+    tempDate.setDate(currentCalcDate.getDate() + d);
+
+    if (d === 0 || tempDate.getMonth() !== previousMonth) {
+      if (SEPARATOR_CONFIG.monthSeparator.enabled) {
+        if (SEPARATOR_CONFIG.monthSeparator.addExtraBlankRow && d > 0) { // ไม่ต้องเพิ่มแถวว่าง ถ้าเป็นเดือนแรกสุด
+          dataToWrite.push(new Array(estimatedTotalWidth).fill(''));
+          backgroundsToWrite.push(new Array(estimatedTotalWidth).fill(null));
+          currentRowCounter++;
+        }
+        
+        const monthText = `${SEPARATOR_CONFIG.monthSeparator.textPrefix}${monthNamesTh[tempDate.getMonth()]} ${tempDate.getFullYear() + 543}${SEPARATOR_CONFIG.monthSeparator.textSuffix}`;
+        const monthRow = new Array(estimatedTotalWidth).fill('');
+        monthRow[0] = monthText;
+        dataToWrite.push(monthRow);
+        backgroundsToWrite.push(new Array(estimatedTotalWidth).fill(SEPARATOR_CONFIG.monthSeparator.backgroundColor));
+        mergesToPerform.push(`A${currentRowCounter}:R${currentRowCounter}`);
+        fontStylesToPerform.push({ range: `A${currentRowCounter}`, color: SEPARATOR_CONFIG.monthSeparator.fontColor, weight: SEPARATOR_CONFIG.monthSeparator.fontWeight, size: SEPARATOR_CONFIG.monthSeparator.fontSize, align: 'center'});
+        
+        // ✨✅ FIX: เพิ่มข้อมูลเดือนลงใน Array สำหรับ Dropdown ✅✨
+        monthDropdownOptions.push(monthText);
+        monthRowMap[monthText] = currentRowCounter;
+        
+        currentRowCounter++;
+        
+        if (SEPARATOR_CONFIG.monthSeparator.addExtraBlankRow) {
+          dataToWrite.push(new Array(estimatedTotalWidth).fill(''));
+          backgroundsToWrite.push(new Array(estimatedTotalWidth).fill(null));
+          currentRowCounter++;
+        }
+      }
+    }
+    previousMonth = tempDate.getMonth();
+    
+    let displayDate = `${tempDate.getDate()}/${tempDate.getMonth() + 1}/${tempDate.getFullYear()}`;
+    for (let i = 0; i < rowsPerDay; i++) {
+        const newRow = new Array(estimatedTotalWidth).fill('');
+        newRow[dateColIdx] = displayDate;
+        newRow[noColIdx] = i + 1;
+        dataToWrite.push(newRow);
+        backgroundsToWrite.push(new Array(estimatedTotalWidth).fill(null));
+        currentRowCounter++;
+    }
+
+    if (d < numDaysToCreate - 1 && SEPARATOR_CONFIG.daySeparator.enabled) {
+        dataToWrite.push(new Array(estimatedTotalWidth).fill(''));
+        backgroundsToWrite.push(new Array(estimatedTotalWidth).fill(SEPARATOR_CONFIG.daySeparator.backgroundColor));
+        mergesToPerform.push(`A${currentRowCounter}:R${currentRowCounter}`);
+        currentRowCounter++;
+    }
+  }
+
+  // ✨ --- เขียนและจัดรูปแบบทั้งหมดในตอนท้าย --- ✨
+  if (dataToWrite.length > 0) {
+    const targetRange = sheet.getRange(startRowToWrite, 1, dataToWrite.length, estimatedTotalWidth);
+    targetRange.setValues(dataToWrite);
+    targetRange.setBackgrounds(backgroundsToWrite);
+    
+    for (const mergeRange of mergesToPerform) {
+      sheet.getRange(mergeRange).merge();
+    }
+    
+    for (const style of fontStylesToPerform) {
+        sheet.getRange(style.range)
+            .setFontColor(style.color)
+            .setFontWeight(style.weight)
+            .setFontSize(style.size)
+            .setHorizontalAlignment(style.align);
+    }
+  }
+
+  // ✨✅ FIX: สร้าง Dropdown และบันทึกตำแหน่งแถว ✅✨
+  const dropdownCell = sheet.getRange("N1");
+  dropdownCell.clearContent();
+  dropdownCell.clearDataValidations();
+  const rule = SpreadsheetApp.newDataValidation().requireValueInList(monthDropdownOptions, true).build();
+  dropdownCell.setDataValidation(rule);
+  dropdownCell.setValue(monthDropdownOptions[0]); // ตั้งค่าเริ่มต้น
+  
+  const userProperties = PropertiesService.getUserProperties();
+  userProperties.setProperty('monthRowPositions', JSON.stringify(monthRowMap));
+
+
+  Browser.msgBox(`🎉 สำเร็จ! สร้างข้อมูลในชีต "${sheetName}" เรียบร้อยแล้ว!`);
+}
+
+
+// --- ฟังก์ชัน onEdit() และ goToMonthRow() (เหมือนเดิม) ---
+function onEdit(e) {
+  const range = e.range;
+  if (range.getA1Notation() === "N1") {
+    const selectedMonthText = range.getValue();
+    goToMonthRow(selectedMonthText);
+  }
+}
+
+function goToMonthRow(monthText) {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  const userProperties = PropertiesService.getUserProperties();
+  const monthRowMapString = userProperties.getProperty('monthRowPositions');
+  
+  if (monthRowMapString) {
+      const monthRowPositions = JSON.parse(monthRowMapString);
+      if (monthRowPositions && monthRowPositions[monthText]) {
+          const targetRow = monthRowPositions[monthText];
+          sheet.setActiveRange(sheet.getRange(targetRow, 1));
+      }
+  }
+}
+
+//================================================================================
+// ส่วนที่ 1: ฟังก์ชันที่เรียกใช้เมื่อเปิดไฟล์ และสร้างเมนู
+//================================================================================
+function onOpen() {
+  const ui = SpreadsheetApp.getUi();
+  const menu = ui.createMenu('💥เครื่องมือ RCP💥');
+
+  // --- (เมนูอื่นๆ ของลูกพี่) ---
+  menu.addItem('สร้างวันที่📅 (กำหนดเอง)', 'updateDateAndNoColumnsOnly');
+  menu.addSeparator();
+  menu.addItem('Set Project & Setup FB/IG', 'promptProjectName');
+  menu.addItem('Apply Project Template', 'applyProjectTemplate');
+  menu.addItem('ใส่สูตรโปรเจกต์', 'showProjectPrompt');
+  menu.addSeparator();
+  menu.addSubMenu(ui.createMenu('✨ จัดการไฮไลท์')
+    .addItem('ติดตั้ง/ตรวจสอบกฎทั้งหมด', 'installHighlightRulesOnAllSheets_Hybrid')
+    .addItem('รีเฟรชเฉพาะชีตนี้ (ด่วน)', 'runHighlightOnCurrentSheetOnly_Simple'));
+  menu.addSubMenu(ui.createMenu('🗓️ จัดการ Monthly Summary')
+    .addItem('สร้างและอัปเดตตารางรายเดือน', 'generateMonthlyTable'));
+  
+  // --- ✅ เมนูจัดการมุมมองที่สมบูรณ์ ---
+  menu.addSubMenu(ui.createMenu('📂 จัดการมุมมอง')
+    .addItem('ยุบข้อมูลเก่า (ชีต Transaction)', 'manualCollapseTransaction') 
+    .addItem('ยุบข้อมูลเก่า (ชีต Monthly Summary)', 'manualCollapseMonthlySummary')
+    .addItem('ยุบข้อมูลเก่า (ชีต Project ที่เปิดดูอยู่)', 'manualCollapseActiveProjectSheet')
+    .addSeparator()
+    .addItem('ขยายข้อมูลทั้งหมด (ชีตที่กำลังเปิดดู)', 'manualExpandActiveSheet'));
+    
+  menu.addToUi();
+  
+}
+
+// ==================================================================
+// ส่วนที่ 2: ฟังก์ชันสำหรับ "ทริกเกอร์ทางการ" (ทำงาน Auto)
+// ==================================================================
+function autoCollapseAll_Triggered() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const todayString = new Date().toLocaleDateString("th-TH");
+  const lastRunDate = scriptProperties.getProperty('lastRunDate');
+
+  if (lastRunDate === todayString) {
+    Logger.log("Auto-Collapse: วันนี้ได้ยุบแถวสำเร็จไปแล้ว ข้ามการทำงานซ้ำ");
+    return; 
+  }
+
+  Logger.log("Auto-Collapse: เริ่มทำงานอัตโนมัติ...");
+  
+  // เรียกใช้ Logic และ "รับสัญญาณ" กลับมา
+  const didCollapse = runCollapseLogic_Transaction(); 
+  
+  // --- [จุดที่แก้ไขสำคัญ] ---
+  // จะบันทึก Property ก็ต่อเมื่อได้รับสัญญาณว่า "มีการยุบแถวจริง" เท่านั้น
+  if (didCollapse) {
+    scriptProperties.setProperty('lastRunDate', todayString);
+    Logger.log("Auto-Collapse: ทำงานยุบแถว Transaction และบันทึกวันที่เรียบร้อย");
+  } else {
+    Logger.log("Auto-Collapse: ไม่มีเงื่อนไขให้ยุบแถว Transaction จะลองใหม่อีกครั้งในรอบถัดไป");
+  }
+}
+
+// ==================================================================
+// ส่วนที่ 3: ฟังก์ชันสำหรับ "เมนู" (ทำงาน Manual)
+// ==================================================================
+function manualCollapseTransaction() { runCollapseLogic_Transaction(); }
+function manualCollapseMonthlySummary() { runCollapseLogic_MonthlySummary(); }
+function manualCollapseActiveProjectSheet() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  if (sheet.getName().startsWith("Project")) {
+    runCollapseLogic_ByDate(sheet);
+  } else {
+    SpreadsheetApp.getUi().alert(`เมนูนี้ใช้สำหรับชีต Project เท่านั้น`);
+  }
+}
+function manualExpandActiveSheet() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  try { sheet.showRows(1, sheet.getMaxRows()); } catch(e){}
+}
+
+
+// ==================================================================
+// ส่วนที่ 4: "เครื่องยนต์" หรือ Logic หลักในการทำงาน
+// ==================================================================
+
+function runCollapseLogic_Transaction() {
+  const DAYS_TO_KEEP = 2;
+  const SHEET_NAME = "Transaction";
+  const LOCK_CELL = "L2";
+  const CONFIG_SHEET_NAME = "Config";
+
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) return false; // << แก้ไข
+
+  // --- [ด่านที่ 1: เช็คสถานะการทำงานของ Python ก่อน] ---
+  const configSheet = ss.getSheetByName(CONFIG_SHEET_NAME);
+  if (configSheet) {
+    const status = configSheet.getRange(LOCK_CELL).getDisplayValue();
+    if (status === "RUNNING") {
+      Logger.log("Transaction: ข้ามการยุบแถว เพราะ Python กำลังทำงาน (สถานะ RUNNING)");
+      return false; // << แก้ไข
+    }
+  }
+
+  // --- [ด่านที่ 2: เริ่ม Logic การเช็ควันที่ที่ฉลาดขึ้น] ---
+  const lastRow = sheet.getLastRow();
+  if (lastRow <= 1) return false; // << แก้ไข
+
+  const markerValues = sheet.getRange(1, 1, lastRow, 1).getDisplayValues();
+  const allDates = new Set();
+  let latestDateTimestamp = 0;
+
+  // 2.1 รวบรวมวันที่ทั้งหมด และหาวันที่ใหม่ที่สุด
+  for (let i = 0; i < lastRow; i++) {
+    const markerText = markerValues[i][0];
+    if (markerText.includes("--- เริ่มต้นการประมวลผลวันที่")) {
+      const match = markerText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+      if (match) {
+        const markerDate = new Date(match[3], parseInt(match[2], 10) - 1, match[1], 12);
+        const timestamp = markerDate.getTime();
+        allDates.add(timestamp);
+        if (timestamp > latestDateTimestamp) {
+          latestDateTimestamp = timestamp;
+        }
+      }
+    }
+  }
+  
+  if (allDates.size < DAYS_TO_KEEP) {
+    Logger.log("มีข้อมูลไม่ถึง 2 วัน ไม่ต้องดำเนินการยุบแถว");
+    return false; // << แก้ไข
+  }
+
+  // 2.2 เช็คว่า "บล็อกของวันล่าสุด" นั้นสมบูรณ์หรือไม่
+  const latestDate = new Date(latestDateTimestamp);
+  const latestDateStr = Utilities.formatDate(latestDate, "GMT", "dd/MM/yyyy");
+  const endMarkerLatest = "--- สิ้นสุดการประมวลผลวันที่ " + latestDateStr;
+
+  let isLatestBlockComplete = false;
+  // วนหาจากท้ายขึ้นบนจะเร็วกว่า
+  for (let i = lastRow - 1; i >= 0; i--) {
+    if (markerValues[i][0] === endMarkerLatest) {
+      isLatestBlockComplete = true;
+      break;
+    }
+  }
+  
+  // 2.3 ถ้าบล็อกล่าสุด "ยังไม่สมบูรณ์" -> ให้หยุดทำงานทันที!
+  if (!isLatestBlockComplete) {
+    Logger.log("รอการทำงาน: บล็อกของวันล่าสุด (" + latestDateStr + ") ยังประมวลผลไม่เสร็จ (ไม่พบแถบสิ้นสุด)");
+    return false; // << แก้ไข
+  }
+
+  // 3. ถ้าผ่านทุกด่านแล้ว ถึงจะเริ่มทำงานยุบแถว
+  Logger.log("สถานะสมบูรณ์: บล็อกล่าสุด ("+ latestDateStr +") เสร็จสิ้นแล้ว จะเริ่มทำการยุบแถวเก่า");
+  
+  sheet.showRows(1, sheet.getMaxRows());
+  SpreadsheetApp.flush();
+  
+  const sortedDates = Array.from(allDates).sort((a, b) => b - a);
+  const datesToKeep = new Set(sortedDates.slice(0, DAYS_TO_KEEP).map(ts => new Date(ts).toLocaleDateString('en-CA')));
+  
+  let rowsToHide = [];
+  let currentBlockStart = -1;
+  
+  for (let i = 0; i < lastRow; i++) {
+    const markerText = markerValues[i][0];
+    if (!markerText.includes("---")) continue;
+    const match = markerText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+    if (match) {
+      const dateStringForCheck = new Date(match[3], parseInt(match[2], 10) - 1, match[1], 12).toLocaleDateString('en-CA');
+      if (!datesToKeep.has(dateStringForCheck)) {
+        if (markerText.includes("--- เริ่มต้น")) {
+          currentBlockStart = i + 1;
+        }
+        if (markerText.includes("--- สิ้นสุด") && currentBlockStart !== -1) {
+          rowsToHide.push({ start: currentBlockStart, end: i + 1 });
+          currentBlockStart = -1;
+        }
+      }
+    }
+  }
+
+  if (rowsToHide.length > 0) {
+    Logger.log(`กำลังจะซ่อน ${rowsToHide.length} บล็อก...`);
+    sheet.showRows(1, lastRow); // แสดงทั้งหมดก่อน เพื่อให้การซ่อนแม่นยำ
+    SpreadsheetApp.flush();
+    for (let i = rowsToHide.length - 1; i >= 0; i--) {
+      const block = rowsToHide[i];
+      sheet.hideRows(block.start, block.end - block.start + 1);
+    }
+    return true; // <<<< คืนค่า true เพราะได้ทำงานยุบแถวจริง
+  } else {
+    Logger.log("ไม่พบแถวเก่าที่ต้องซ่อน");
+    return false; // <<<< คืนค่า false เพราะไม่ได้ทำอะไร
+  }
+}
+
+
+
+
+function runCollapseLogic_MonthlySummary() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Monthly_Summary");
+  if (sheet) {
+    runCollapseLogic_ByDate(sheet);
+  }
+}
+
+function runCollapseLogic_AllProjects() {
+  const employeeSheetNames = [
+    "Project Q", "Project T.", "Project H.", "Project C", "Project Boy", "Project Bow", 
+    "Project F", "Project Aorra", "Project N", "Project D", "Project G กุ๊บกิ๊บ", 
+    "Project King", "Project Carry", "Project Anan", "Project Jes", "Project Admin", "Project เทส"
+  ];
+  employeeSheetNames.forEach(name => {
+    const sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+    if (sheet) {
+      runCollapseLogic_ByDate(sheet);
+    }
+  });
+}
+
+function runCollapseLogic_ByDate(sheet) {
+  if (!sheet) return;
+  try { sheet.showRows(1, sheet.getMaxRows()); } catch(e){}
+  SpreadsheetApp.flush();
+  // (ロジックการซ่อนตามวันที่ ที่ดีอยู่แล้ว)
+  const lastRow = sheet.getLastRow();
+  const headerRows = 1;
+  if (lastRow <= headerRows) return;
+  const yesterday = new Date();
+  yesterday.setDate(yesterday.getDate() - 1);
+  yesterday.setHours(0, 0, 0, 0);
+  const values = sheet.getRange(headerRows + 1, 1, lastRow - headerRows, 1).getDisplayValues();
+  let firstOldRow = -1, lastOldRow = -1;
+  for (let i = 0; i < values.length; i++) {
+    const rowDateStr = values[i][0];
+    if (!rowDateStr) continue;
+    try {
+      const parts = rowDateStr.split('/');
+      const rowDate = new Date(parts[2], parseInt(parts[1], 10) - 1, parts[0]);
+      rowDate.setHours(0, 0, 0, 0);
+      if (rowDate < yesterday) {
+        if (firstOldRow === -1) firstOldRow = i + headerRows + 1;
+        lastOldRow = i + headerRows + 1;
+      }
+    } catch (e) { continue; }
+  }
+  if (firstOldRow !== -1) {
+    sheet.hideRows(firstOldRow, lastOldRow - firstOldRow + 1);
+  }
+}
+
+
+
+
+
+
+function setupFBIG() {
+  const sh = SpreadsheetApp.getActiveSheet();
+  if (!sh.getName().startsWith('Project ')) return;
+  sh.getRange('E1:F1').clearContent();
+  sh.getRange('E1').setFormula(`=ARRAYFORMULA(IF(ROW(E:E)=1,"FB",IF(ROW(E:E)<=3,"",IF(D:D="","",IFERROR(VLOOKUP($O$1,Staffs!$F:$H,2,FALSE),0)))))`);
+  sh.getRange('F1').setFormula(`=ARRAYFORMULA(IF(ROW(F:F)=1,"IG",IF(ROW(F:F)<=3,"",IF(D:D="","",IFERROR(VLOOKUP($O$1,Staffs!$F:$H,3,FALSE),0)))))`);
+}
+
+
+function promptProjectName() {
+  const ui = SpreadsheetApp.getUi();
+  const res = ui.prompt('ตั้งชื่อโปรเจกต์', 'กรุณาพิมพ์ชื่อโปรเจกต์ (ตรงกับชีต Staffs!F:F):', ui.ButtonSet.OK_CANCEL);
+  if (res.getSelectedButton() !== ui.Button.OK) return;
+  const name = res.getResponseText().trim();
+  if (!name) {
+    ui.alert('ชื่อโปรเจกต์ห้ามเว้นว่าง!');
+    return;
+  }
+  const sh = SpreadsheetApp.getActiveSheet();
+  sh.getRange('O1').setValue(name);
+  setupFBIG();
+  ui.alert(`ตั้งชื่อโปรเจกต์เป็น "${name}" และวางสูตร FB/IG เรียบร้อย 🎉`);
+}
+
+function applyProjectTemplate() {
+  const ui = SpreadsheetApp.getUi();
+  const ss = SpreadsheetApp.getActive();
+  const sheet = ss.getActiveSheet();
+  const resp = ui.prompt('Project Template', 'กรุณาใส่แถวสูงสุด (ปล่อยว่าง = ใช้ทั้งชีต):', ui.ButtonSet.OK_CANCEL);
+  if (resp.getSelectedButton() != ui.Button.OK) return;
+  let lastRow = parseInt(resp.getResponseText(), 10);
+  if (isNaN(lastRow) || lastRow <= 0) {
+    lastRow = sheet.getMaxRows();
+  }
+  sheet.getRange('K1').setFormula(`={"สถานะส่งงาน";ARRAYFORMULA(IF(A2:A="","",IF((G2:G<>"")*(H2:H<>""),"ส่งครบ",IF((G2:G<>"")+(H2:H<>"")=1,"ขาดส่ง 1 คลิป","ขาดส่ง 2 คลิป"))))}`);
+  sheet.getRange('P1').setFormula(`={"Clips_Sent";ARRAYFORMULA(IF(A2:A="","",IF(LEN(G2:G)>0,1,0)+IF(LEN(H2:H)>0,1,0)))}`);
+  sheet.getRange('Q1').setFormula(`={"Leave_Days";ARRAYFORMULA(IF(A2:A="","",IF(COUNTIFS(A2:A,A2:A,R2:R,"หยุด")>0,"หยุด",IF(R2:R<>"",R2:R,""))))}`);
+  const rule = SpreadsheetApp.newDataValidation().requireValueInList(["ส่งครบ", "หยุด", "ขาดส่ง 1 คลิป", "ขาดส่ง 2 คลิป"], true).setAllowInvalid(false).build();
+  sheet.getRange(2, 18, lastRow - 1, 1).setDataValidation(rule);
+  ui.alert('Applied template up to row ' + lastRow);
+}
+
+
+// ฟังก์ชันนี้จำเป็นสำหรับการทำงานของโค้ดหลัก
+/**
+ * Helper function to convert sheet data (2D array) into an array of objects.
+ * The first row of the data is used as keys.
+ * @param {Array<Array<any>>} data The 2D array from sheet.getValues().
+ * @returns {Array<Object>} An array of objects.
+ */
+function sheetDataToObjects(data) {
+  if (data.length < 2) return [];
+  const headers = data[0].map(header => header.trim());
+  const objects = [];
+  for (let i = 1; i < data.length; i++) {
+    const row = data[i];
+    const obj = {};
+    for (let j = 0; j < headers.length; j++) {
+      obj[headers[j]] = row[j];
+    }
+    objects.push(obj);
+  }
+  return objects;
+}
+
+function getMonthThai(monthIndex) {
+  const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+  return months[monthIndex];
+}
+
+
+/**
+ * @OnlyCurrentDoc
+ * Creates a custom menu to generate and manage the Monthly Summary sheet.
+ */
+/**
+ * A helper function that sets up all header formulas on a fresh sheet.
+ * @param {Sheet} sheet The sheet object for 'Monthly_Summary'.
+ */
+function setupHeaderFormulas(sheet) {
+  SpreadsheetApp.getActiveSpreadsheet().toast("เป็นชีตใหม่, กำลังฝังสูตรทั้งหมด...", "⚙️ Setup Formulas");
+
+  // Object containing all final, tested formulas
+  const formulas = {
+    'C1': '={\"Name\"; ARRAYFORMULA(IF(LEN(B2:B), IFERROR(VLOOKUP(B2:B, {Staffs!F:F, Staffs!C:C}, 2, FALSE)), IFERROR(1/0)))}',
+    'D1': '={\"Project\"; ARRAYFORMULA(IF(LEN(C2:C), IFERROR(VLOOKUP(C2:C, Staffs!C:F, 4, FALSE)), IFERROR(1/0)))}',
+    'E1': '={\"DailyTarget\";ARRAYFORMULA(IF(LEN(C2:C), IFERROR(VLOOKUP(C2:C, Staffs!C:O, 13, FALSE), 40), IFERROR(1/0)))}',
+    'F1': '={\"TotalSent\";MAP(A2:A, B2:B, LAMBDA(date_cell, sheet_name_cell, IF(ISBLANK(date_cell),, IFERROR(SUM(FILTER(INDIRECT(\"\'\"&sheet_name_cell&\"\'!P:P\"), INT(INDIRECT(\"\'\"&sheet_name_cell&\"\'!A:A\")) = INT(date_cell))), 0))))}',
+    'G1': '={\"LeaveDays\";MAP(A2:A, B2:B, LAMBDA(date_cell, sheet_name_cell, IF(ISBLANK(date_cell),, IF((COUNTIFS(INDIRECT(\"\'\"&sheet_name_cell&\"\'!A:A\"), \">=\"&date_cell, INDIRECT(\"\'\"&sheet_name_cell&\"\'!A:A\"), \"<\"&date_cell+1, INDIRECT(\"\'\"&sheet_name_cell&\"\'!Q:Q\"), \">0\")) + (COUNTIFS(INDIRECT(\"\'\"&sheet_name_cell&\"\'!A:A\"), \">=\"&date_cell, INDIRECT(\"\'\"&sheet_name_cell&\"\'!A:A\"), \"<\"&date_cell+1, INDIRECT(\"\'\"&sheet_name_cell&\"\'!Q:Q\"), \"หยุด\")) > 0, \"🌴 ลา\", \"\"))))}',
+    'H1': '={\"MissingDays\";ARRAYFORMULA(IF(LEN(A2:A), IF(G2:G <> \"\", \"\", IF(F2:F = 0, 1, \"\")), \"\"))}',
+    'I1': '={\"MissingClips\";ARRAYFORMULA(IF(LEN(A2:A), IF(G2:G <> \"\", \"\", LET(missing, E2:E - F2:F, IF(missing > 0, missing, \"\"))), \"\"))}',
+    'J1': '={\"Completion%\";ARRAYFORMULA(IF(LEN(A2:A), IFERROR(F2:F/E2:E), \"\"))}',
+    'K1': '={\"สถานะ\";ARRAYFORMULA(IF(LEN(A2:A), IFS(G2:G <> \"\", \"🌴 ลา\", ISBLANK(F2:F), \"\", F2:F >= E2:E, \"✅ ส่งครบ\", F2:F > 0, \"⚠️ ขาด \" & (E2:E-F2:F) & \" คลิป\", F2:F = 0, \"🚫 ไม่ได้ส่ง\", TRUE, \"\"), \"\"))}'
+  };
+
+  // Loop to apply all formulas
+  for (const cell in formulas) {
+    sheet.getRange(cell).setFormula(formulas[cell]);
+  }
+  
+  // Set number formats
+  sheet.getRange("J:J").setNumberFormat("0.00%");
+  sheet.getRange("E:I").setNumberFormat("0");
+}
+
+
+/**
+ * ✅ FINAL UNIFIED SCRIPT
+ * Generates the monthly table structure and applies header formulas if it's a new sheet.
+ */
+function generateMonthlyTable() {
+  const ui = SpreadsheetApp.getUi();
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  
+  const summarySheet = spreadsheet.getSheetByName('Monthly_Summary') || spreadsheet.insertSheet('Monthly_Summary');
+  const staffsSheet = spreadsheet.getSheetByName("Staffs");
+
+  if (!staffsSheet) {
+    ui.alert("ไม่พบชีตชื่อ 'Staffs' กรุณาตรวจสอบ");
+    return;
+  }
+
+  const startDateInput = ui.prompt("📅 กรอกวันเริ่มต้น", "กรุณากรอกวันที่ของเดือนที่ต้องการสร้าง (เช่น 01/08/2025)", ui.ButtonSet.OK_CANCEL);
+  if (startDateInput.getSelectedButton() !== ui.Button.OK || !startDateInput.getResponseText()) return;
+  
+  const parts = startDateInput.getResponseText().split("/");
+  if (parts.length !== 3) {
+    ui.alert("รูปแบบวันที่ไม่ถูกต้อง กรุณาลองใหม่ (DD/MM/YYYY)");
+    return;
+  }
+  
+  SpreadsheetApp.getActiveSpreadsheet().toast("กำลังสร้างโครงตาราง... กรุณารอสักครู่", "⏳ กำลังทำงาน");
+
+  const startDate = new Date(Number(parts[2]), Number(parts[1]) - 1, Number(parts[0]));
+  const year = startDate.getFullYear();
+  const month = startDate.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+  const staffData = staffsSheet.getRange("F2:F" + staffsSheet.getLastRow()).getValues().flat().filter(String);
+  const activeProjects = [...new Set(staffData)];
+
+  const header = ['Date', 'SheetName', 'Name', 'Project'];
+  const lastRow = summarySheet.getLastRow();
+  let currentRow;
+
+  // ✅ ตรวจสอบชีต: ถ้าเป็นชีตใหม่จะสร้างหัวข้อและฝังสูตรทั้งหมด
+  if (lastRow < 1) {
+    summarySheet.getRange(1, 1, 1, 4).setValues([header]).setFontWeight("bold");
+    setupHeaderFormulas(summarySheet); // เรียกใช้ฟังก์ชันฝังสูตร
+    currentRow = 2;
+  } else {
+    currentRow = lastRow + 2;
+  }
+
+  const monthHeader = `สรุปข้อมูลประจำเดือน ${getMonthThai(month)} ${year + 543}`;
+  summarySheet.getRange(currentRow, 1, 1, 11).merge().setValue(monthHeader).setBackground("#4a86e8").setFontColor("#ffffff").setFontWeight("bold").setHorizontalAlignment("center");
+  currentRow++;
+
+  const allRowsData = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    const day = new Date(year, month, d);
+    allRowsData.push(Array(4).fill('')); // Daily separator, only for columns A-D
+    for (const project of activeProjects) {
+      allRowsData.push([day, project, '', '']); // เติมแค่ Date และ SheetName
+    }
+  }
+
+  if (allRowsData.length > 0) {
+    const range = summarySheet.getRange(currentRow, 1, allRowsData.length, 4);
+    range.setValues(allRowsData);
+    
+    // Style separators
+    const fullRange = summarySheet.getRange(currentRow, 1, allRowsData.length, 11);
+    const backgrounds = fullRange.getBackgrounds();
+    for (let i = 0; i < allRowsData.length; i++) {
+        if (allRowsData[i][0] === '') {
+            for (let j = 0; j < 11; j++) {
+                backgrounds[i][j] = "#d9d9d9";
+            }
+        }
+    }
+    fullRange.setBackgrounds(backgrounds);
+  }
+  
+  SpreadsheetApp.getActiveSpreadsheet().toast("สร้างโครงตารางสำเร็จ!", "✅ เสร็จสิ้น", 5);
+}
+
+function getMonthThai(monthIndex) {
+  const months = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+  return months[monthIndex];
+}
+
+
+/**
+ * แสดงหน้าต่าง UI (Sidebar) เพื่อรับชื่อโปรเจกต์จากผู้ใช้
+ */
+function showProjectPrompt() {
+  var html = HtmlService.createHtmlOutputFromFile('ProjectInputUI')
+      .setWidth(300)
+      .setTitle('ระบุชื่อโปรเจกต์');
+  SpreadsheetApp.getUi().showSidebar(html);
+}
+
+/**
+ * ฟังก์ชันหลักที่ถูกเรียกจาก UI เพื่อทำการล้างและใส่สูตร
+ * @param {string} projectName - ชื่อโปรเจกต์ที่ได้รับจาก Input ของผู้ใช้
+ */
+function applyFormulas(projectName) {
+  if (!projectName || projectName.trim() === "") {
+    SpreadsheetApp.getUi().alert('กรุณากรอกชื่อโปรเจกต์');
+    return;
+  }
+
+  const sheet = SpreadsheetApp.getActiveSheet();
+  const ui = SpreadsheetApp.getUi();
+
+  try {
+    // ล้างข้อมูลเก่าในคอลัมน์เป้าหมาย (ตั้งแต่แถวที่ 1 เป็นต้นไป)
+    sheet.getRange("C1:D").clearContent();
+    sheet.getRange("G1:H").clearContent();
+    sheet.getRange("L1:M").clearContent();
+    ui.alert('ล้างข้อมูลเก่าเรียบร้อย กำลังใส่สูตรใหม่...');
+
+    // สูตรสำหรับแต่ละคอลัมน์
+    const formulas = {
+      'C1': `={\"ชื่อเพจ/ช่อง\"; \"\"; \"\"; MAP(A4:A, B4:B, LAMBDA(d, p, IF(ISBLANK(d),, IFERROR(FILTER(Transaction!K:K, Transaction!E:E = d, Transaction!D:D = \"${projectName} - Page \" & p)))))}`,
+      'D1': `={\"ลิ้งก์เพจ\"; \"\"; \"\"; MAP(A4:A, B4:B, LAMBDA(d, p, IF(ISBLANK(d),, IFERROR(FILTER(Transaction!J:J, Transaction!E:E = d, Transaction!D:D = \"${projectName} - Page \" & p)))))}`,
+      'G1': `={\"ลิงก์คลิป 1\"; \"\"; \"\"; MAP(A4:A, B4:B, LAMBDA(d, p, IF(ISBLANK(d),, IFERROR(FILTER(Transaction!F:F, Transaction!E:E = d, Transaction!D:D = \"${projectName} - Page \" & p)))))}`,
+      'H1': `={\"ลิงก์คลิป 2\"; \"\"; \"\"; MAP(A4:A, B4:B, LAMBDA(d, p, IF(ISBLANK(d),, IFERROR(FILTER(Transaction!G:G, Transaction!E:E = d, Transaction!D:D = \"${projectName} - Page \" & p)))))}`,
+      'L1': `={\"เวลาส่ง 1\"; \"\"; \"\"; MAP(A4:A, B4:B, LAMBDA(d, p, IF(ISBLANK(d),, IFERROR(TEXT(TIMEVALUE(FILTER(Transaction!L:L, Transaction!E:E = d, Transaction!D:D = \"${projectName} - Page \" & p)), \"HH:MM\"), \"\"))))}`,
+      'M1': `={\"เวลาส่ง 2\"; \"\"; \"\"; MAP(A4:A, B4:B, LAMBDA(d, p, IF(ISBLANK(d),, IFERROR(TEXT(TIMEVALUE(FILTER(Transaction!L:L, Transaction!E:E = d, Transaction!D:D = \"${projectName} - Page \" & p)), \"HH:MM\"), \"\"))))}`
+    };
+
+    // วนลูปเพื่อใส่สูตรลงในแต่ละเซลล์
+    for (const cell in formulas) {
+      sheet.getRange(cell).setFormula(formulas[cell]);
+    }
+
+    ui.alert(`ใส่สูตรสำหรับโปรเจกต์ "${projectName}" เรียบร้อยแล้ว!`);
+  } catch (e) {
+    ui.alert('เกิดข้อผิดพลาด: ' + e.message);
+  }
+}
+
+// ====================================================================
+// สคริปต์ Final Boss: สร้างและติดตั้ง Conditional Formatting อัจฉริยะ
+// - กดครั้งเดียว สคริปต์จะไปสร้าง "กฎ" การไฮไลท์ที่ถูกต้องให้ทุกชีตเอง
+// ====================================================================
+
+// --- การตั้งค่าหลัก ---
+const HIGHLIGHT_COLOR = "#EAF1FC"; // สีฟ้าอ่อน Professional Look
+const DATE_HEADER_KEYWORDS = ["date", "วันที่", "submissiondate"]; 
+const RULE_DESCRIPTION = "Gemini Auto-Highlight Rule"; // คำอธิบายสำหรับกฎที่เราสร้าง
+
+// =============================================================================
+// --- ฟังก์ชันสำหรับปุ่ม "ติดตั้งทั้งหมด" (ใช้ Logic แบบ Hybrid ที่ช้าแต่ปลอดภัย) ---
+// =============================================================================
+function installHighlightRulesOnAllSheets_Hybrid() {
+  const ui = SpreadsheetApp.getUi();
+  const allSheets = SpreadsheetApp.getActiveSpreadsheet().getSheets();
+  let sheetsUpdatedCount = 0;
+  
+  ui.showSidebar(HtmlService.createHtmlOutput('<p>กำลังตรวจสอบและติดตั้งกฎไฮไลท์... โปรดรอสักครู่</p>').setTitle('สถานะ'));
+
+  allSheets.forEach(sheet => {
+    if (applyConditionalFormattingLogic_Hybrid(sheet)) {
+      sheetsUpdatedCount++;
+    }
+  });
+  
+  ui.alert('ดำเนินการเสร็จสิ้น!', `มีการติดตั้ง/อัปเดตกฎทั้งหมด ${sheetsUpdatedCount} ชีต (ชีตที่ถูกต้องอยู่แล้วจะถูกข้ามไป)`, ui.ButtonSet.OK);
+}
+
+// =======================================================================
+// --- ฟังก์ชันสำหรับปุ่ม "รีเฟรชชีตนี้" (ใช้ Logic แบบ Simple ที่เร็ว) ---
+// =======================================================================
+function runHighlightOnCurrentSheetOnly_Simple() {
+  const sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  if (applyConditionalFormattingLogic_Simple(sheet)) {
+    SpreadsheetApp.getUi().alert(`รีเฟรชไฮไลท์ในชีต '${sheet.getName()}' เรียบร้อยแล้ว`);
+  } else {
+    SpreadsheetApp.getUi().alert(`หาคอลัมน์ "วันที่" ในชีต '${sheet.getName()}' ไม่เจอครับ`);
+  }
+}
+
+// ========================================================================
+// --- ส่วนของ Logic หลัก (มี 2 แบบให้เลือกใช้) ---
+// ========================================================================
+
+/**
+ * LOGIC แบบ HYBRID (ช้าแต่ปลอดภัย): ตรวจสอบก่อน ถ้าถูกแล้วให้ข้าม
+ */
+function applyConditionalFormattingLogic_Hybrid(sheet) {
+  const HIGHLIGHT_COLOR = "#EAF1FC";
+  const DATE_HEADER_KEYWORDS = ["date", "วันที่", "submissiondate"];
+
+  let dateColumnIndex = -1, headerRowIndex = -1;
+  try {
+    const data = sheet.getRange(1, 1, 10, sheet.getLastColumn()).getValues();
+    for (let i = 0; i < data.length; i++) { for (let j = 0; j < data[i].length; j++) { if (DATE_HEADER_KEYWORDS.includes(String(data[i][j]).toLowerCase().replace(/\s/g, ''))) { headerRowIndex = i + 1; dateColumnIndex = j + 1; break; } } if (headerRowIndex != -1) break; }
+  } catch (e) { return false; }
+
+  if (dateColumnIndex === -1) return false;
+
+  const firstDataRow = headerRowIndex + 1;
+  const columnLetter = sheet.getRange(1, dateColumnIndex).getA1Notation().replace("1", "");
+  // ✅✅✅ ป้องกันกฎหาย: กำหนด Range ทั้งคอลัมน์ ✅✅✅
+  const rangeA1Notation = `${columnLetter}${firstDataRow}:${columnLetter}`;
+  const expectedFormula = `=$${columnLetter}${firstDataRow}=TODAY()`;
+
+  const rules = sheet.getConditionalFormatRules();
+
+  for (const rule of rules) {
+    const criteria = rule.getBooleanCondition();
+    if (criteria && criteria.getCriteriaType() === SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA) {
+      if (criteria.getCriteriaValues()[0] === expectedFormula) {
+         Logger.log(`ชีต '${sheet.getName()}' มีกฎที่ถูกต้องอยู่แล้ว -> ข้าม`);
+         return false;
+      }
+    }
+  }
+  
+  // ถ้าไม่เจอกฎที่ถูกต้อง ถึงจะลงมือแก้ไข
+  return applyFormattingRule(sheet, rules, dateColumnIndex, headerRowIndex, HIGHLIGHT_COLOR);
+}
+
+
+/**
+ * LOGIC แบบ SIMPLE (เร็ว): ลบแล้วสร้างใหม่เสมอ
+ */
+function applyConditionalFormattingLogic_Simple(sheet) {
+   const HIGHLIGHT_COLOR = "#EAF1FC";
+   return applyFormattingRule(sheet, sheet.getConditionalFormatRules(), null, null, HIGHLIGHT_COLOR);
+}
+
+
+/**
+ * ฟังก์ชันสร้างและติดตั้งกฎจริงๆ (ใช้ร่วมกัน)
+ */
+function applyFormattingRule(sheet, rules, dateColumnIndex, headerRowIndex, highlightColor) {
+  const DATE_HEADER_KEYWORDS = ["date", "วันที่", "submissiondate"];
+
+  if (!dateColumnIndex || !headerRowIndex) {
+      try {
+        const data = sheet.getRange(1, 1, 10, sheet.getLastColumn()).getValues();
+        for (let i = 0; i < data.length; i++) { for (let j = 0; j < data[i].length; j++) { if (DATE_HEADER_KEYWORDS.includes(String(data[i][j]).toLowerCase().replace(/\s/g, ''))) { headerRowIndex = i + 1; dateColumnIndex = j + 1; break; } } if (headerRowIndex != -1) break; }
+      } catch (e) { return false; }
+  }
+
+  if (dateColumnIndex === -1) return false;
+
+  const newRules = rules.filter(rule => {
+    const criteria = rule.getBooleanCondition();
+    return !(criteria && criteria.getCriteriaType() === SpreadsheetApp.BooleanCriteria.CUSTOM_FORMULA && criteria.getCriteriaValues()[0].includes("=TODAY()"));
+  });
+
+  const firstDataRow = headerRowIndex + 1;
+  const columnLetter = sheet.getRange(1, dateColumnIndex).getA1Notation().replace("1", "");
+  // ✅✅✅ ป้องกันกฎหาย: กำหนด Range ทั้งคอลัมน์ ✅✅✅
+  const rangeToApply = sheet.getRange(`${columnLetter}${firstDataRow}:${columnLetter}`);
+  
+  const newRule = SpreadsheetApp.newConditionalFormatRule()
+    .setRanges([rangeToApply])
+    .whenFormulaSatisfied(`=$${columnLetter}${firstDataRow}=TODAY()`)
+    .setBackground(highlightColor)
+    .build();
+
+  newRules.push(newRule);
+  sheet.setConditionalFormatRules(newRules);
+  
+  Logger.log(`ติดตั้งกฎในชีต '${sheet.getName()}' เรียบร้อย`);
+  return true;
+}
+
+
+
+
+
