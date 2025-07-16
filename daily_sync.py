@@ -4,14 +4,20 @@ from datetime import datetime, timedelta, timezone # <<< ตรวจสอบ�
 import traceback
 import re
 from google.api_core.exceptions import GoogleAPIError 
+<<<<<<< HEAD
 import sys # <<< ตรวจสอบว่ามีบรรทัดนี้
+=======
+>>>>>>> 9b376ff6da9d93f98cd7bdc2db9d6a28cc023546
 
 # --- การตั้งค่าหลัก ---
 MASTER_SHEET_URL = "https://docs.google.com/spreadsheets/d/17lOtuHum9VHdukfHr7143uCGydVZSaJNi2RhzGfh81g/edit#gid=0"
 STAFFS_SHEET_NAME = "Staffs"
 TRANSACTION_SHEET_NAME = "Transaction"
 CONFIG_SHEET_NAME = "Config"
+<<<<<<< HEAD
 LOCK_CELL = "L2" # หรือเซลล์อื่นที่ว่างในชีต Config
+=======
+>>>>>>> 9b376ff6da9d93f98cd7bdc2db9d6a28cc023546
 
 # --- Retry settings ---
 MAX_RETRIES = 5
@@ -57,6 +63,7 @@ def append_and_format_separator(sheet, text, bg_color, text_color, num_cols_to_m
     time.sleep(0.5)
 
 def get_target_date_and_mode():
+<<<<<<< HEAD
     """
     ตรวจสอบว่ามีการสั่งงานด้วย date แบบเจาะจงหรือไม่
     ถ้าไม่มี ให้ใช้ Logic เวลาอัตโนมัติแบบเดิม
@@ -83,6 +90,14 @@ def get_target_date_and_mode():
     else:
         target_date = now_bkk
         print(f"🎯 โหมด: อัปเดตรายชั่วโมง (Hourly) | วันที่เป้าหมาย: {target_date.strftime('%d/%m/%Y')}")
+=======
+    now_utc = datetime.now(timezone.utc)
+    now_bkk = now_utc + timedelta(hours=7)
+    if now_bkk.hour == 0:
+        target_date = now_bkk - timedelta(days=1); print(f"🎯 โหมด: เก็บตกท้ายวัน (Reconciliation) | วันที่เป้าหมาย: {target_date.strftime('%d/%m/%Y')}")
+    else:
+        target_date = now_bkk; print(f"🎯 โหมด: อัปเดตรายชั่วโมง (Hourly) | วันที่เป้าหมาย: {target_date.strftime('%d/%m/%Y')}")
+>>>>>>> 9b376ff6da9d93f98cd7bdc2db9d6a28cc023546
     return target_date
 
 def delete_date_block(sheet, date_str_for_header):
@@ -124,6 +139,7 @@ def run_auto_sync():
 
         client = g_sheet_api.get_gspread_client()
         master_workbook = retry_api_call(client.open_by_url, MASTER_SHEET_URL)
+<<<<<<< HEAD
         config_sheet = retry_api_call(master_workbook.worksheet, CONFIG_SHEET_NAME)
 
         # --- [จุดตรวจสอบสถานะของ Python] ---
@@ -138,6 +154,8 @@ def run_auto_sync():
         print(f"🟢 แขวนป้าย 'RUNNING' ที่เซลล์ {LOCK_CELL} เรียบร้อย")  
         
 
+=======
+>>>>>>> 9b376ff6da9d93f98cd7bdc2db9d6a28cc023546
         print("📥 กำลังโหลดข้อมูล Staffs และ Config...")
         staffs_sheet, config_sheet = (retry_api_call(master_workbook.worksheet, name) for name in [STAFFS_SHEET_NAME, CONFIG_SHEET_NAME])
         all_staffs, project_configs = get_sheet_data_as_objects(staffs_sheet), {conf.get('ConfigType','').strip(): conf for conf in get_sheet_data_as_objects(config_sheet) if conf.get('ConfigType')}
@@ -280,6 +298,7 @@ def run_auto_sync():
     time.sleep(1) 
 
 if __name__ == '__main__':
+<<<<<<< HEAD
     # กำหนดค่าคงที่สำหรับ "เก็บป้าย" โดยเฉพาะ
     LOCK_CELL = "L2" 
     CONFIG_SHEET_NAME = "Config"
@@ -310,3 +329,6 @@ if __name__ == '__main__':
 
         except Exception as e_final:
             print(f"    ❌ เกิดข้อผิดพลาดตอนพยายามเก็บป้ายครั้งสุดท้าย: {e_final}")
+=======
+    run_auto_sync()
+>>>>>>> 9b376ff6da9d93f98cd7bdc2db9d6a28cc023546
