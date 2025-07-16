@@ -258,7 +258,7 @@ function onOpen() {
 }
 
 // ==================================================================
-// ส่วนที่ 2: ฟังก์ชันสำหรับ "ทริกเกอร์ทางการ" (ทำงาน Auto)
+// ส่วนที่ 1: ฟังก์ชันสำหรับ Trigger อัตโนมัติ (ตามที่ลูกพี่ต้องการ)
 // ==================================================================
 function autoCollapseAll_Triggered() {
   const scriptProperties = PropertiesService.getScriptProperties();
@@ -269,19 +269,14 @@ function autoCollapseAll_Triggered() {
     Logger.log("Auto-Collapse: วันนี้ได้ยุบแถวสำเร็จไปแล้ว ข้ามการทำงานซ้ำ");
     return; 
   }
-
-  Logger.log("Auto-Collapse: เริ่มทำงานอัตโนมัติ...");
   
-  // เรียกใช้ Logic และ "รับสัญญาณ" กลับมา
   const didCollapse = runCollapseLogic_Transaction(); 
   
-  // --- [จุดที่แก้ไขสำคัญ] ---
-  // จะบันทึก Property ก็ต่อเมื่อได้รับสัญญาณว่า "มีการยุบแถวจริง" เท่านั้น
-  if (didCollapse) {
+  if (didCollapse === true) {
     scriptProperties.setProperty('lastRunDate', todayString);
     Logger.log("Auto-Collapse: ทำงานยุบแถว Transaction และบันทึกวันที่เรียบร้อย");
   } else {
-    Logger.log("Auto-Collapse: ไม่มีเงื่อนไขให้ยุบแถว Transaction จะลองใหม่อีกครั้งในรอบถัดไป");
+    Logger.log("Auto-Collapse: ไม่มีเงื่อนไขให้ยุบแถว หรือยังไม่ถึงเวลา");
   }
 }
 
@@ -305,120 +300,96 @@ function manualExpandActiveSheet() {
 
 
 // ==================================================================
-// ส่วนที่ 4: "เครื่องยนต์" หรือ Logic หลักในการทำงาน
+// ส่วนที่ 2: "เครื่องยนต์" หรือ Logic หลักในการทำงาน (เวอร์ชันแก้ไขล่าสุด)
 // ==================================================================
-
 function runCollapseLogic_Transaction() {
   const DAYS_TO_KEEP = 2;
   const SHEET_NAME = "Transaction";
   const LOCK_CELL = "L2";
   const CONFIG_SHEET_NAME = "Config";
 
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const sheet = ss.getSheetByName(SHEET_NAME);
-  if (!sheet) return false; // << แก้ไข
+  try {
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheet = ss.getSheetByName(SHEET_NAME);
+    if (!sheet) return null;
 
-  // --- [ด่านที่ 1: เช็คสถานะการทำงานของ Python ก่อน] ---
-  const configSheet = ss.getSheetByName(CONFIG_SHEET_NAME);
-  if (configSheet) {
-    const status = configSheet.getRange(LOCK_CELL).getDisplayValue();
-    if (status === "RUNNING") {
-      Logger.log("Transaction: ข้ามการยุบแถว เพราะ Python กำลังทำงาน (สถานะ RUNNING)");
-      return false; // << แก้ไข
+    const configSheet = ss.getSheetByName(CONFIG_SHEET_NAME);
+    if (configSheet && configSheet.getRange(LOCK_CELL).getDisplayValue().trim() === "RUNNING") {
+      Logger.log("ข้ามการยุบแถว เพราะ Python กำลังทำงาน");
+      return null;
     }
-  }
 
-  // --- [ด่านที่ 2: เริ่ม Logic การเช็ควันที่ที่ฉลาดขึ้น] ---
-  const lastRow = sheet.getLastRow();
-  if (lastRow <= 1) return false; // << แก้ไข
+    const lastRow = sheet.getLastRow();
+    if (lastRow <= 1) return false;
 
-  const markerValues = sheet.getRange(1, 1, lastRow, 1).getDisplayValues();
-  const allDates = new Set();
-  let latestDateTimestamp = 0;
+    // --- Step 1: กวาดข้อมูลสร้างเป็น Object ของแต่ละบล็อก ---
+    const markerValues = sheet.getRange(1, 1, lastRow, 1).getDisplayValues();
+    const dateBlocks = {}; // Object สำหรับเก็บ { 'YYYY-MM-DD': {start: row, end: row, timestamp: ts} }
 
-  // 2.1 รวบรวมวันที่ทั้งหมด และหาวันที่ใหม่ที่สุด
-  for (let i = 0; i < lastRow; i++) {
-    const markerText = markerValues[i][0];
-    if (markerText.includes("--- เริ่มต้นการประมวลผลวันที่")) {
-      const match = markerText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-      if (match) {
-        const markerDate = new Date(match[3], parseInt(match[2], 10) - 1, match[1], 12);
-        const timestamp = markerDate.getTime();
-        allDates.add(timestamp);
-        if (timestamp > latestDateTimestamp) {
-          latestDateTimestamp = timestamp;
+    // วนลูปเพื่อหา "แถวเริ่มต้น" ของทุกวันก่อน
+    for (let i = 0; i < lastRow; i++) {
+        const markerText = markerValues[i][0].trim();
+        if (markerText.startsWith("--- เริ่มต้นการประมวลผลวันที่")) {
+            const match = markerText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+            if (match) {
+                const dateObj = new Date(match[3], parseInt(match[2], 10) - 1, match[1], 12);
+                const dateStr = `${match[3]}-${match[2]}-${match[1]}`;
+                dateBlocks[dateStr] = {
+                    timestamp: dateObj.getTime(),
+                    start: i + 1,
+                    end: -1 // กำหนดค่าเริ่มต้น
+                };
+            }
         }
-      }
     }
-  }
-  
-  if (allDates.size < DAYS_TO_KEEP) {
-    Logger.log("มีข้อมูลไม่ถึง 2 วัน ไม่ต้องดำเนินการยุบแถว");
-    return false; // << แก้ไข
-  }
 
-  // 2.2 เช็คว่า "บล็อกของวันล่าสุด" นั้นสมบูรณ์หรือไม่
-  const latestDate = new Date(latestDateTimestamp);
-  const latestDateStr = Utilities.formatDate(latestDate, "GMT", "dd/MM/yyyy");
-  const endMarkerLatest = "--- สิ้นสุดการประมวลผลวันที่ " + latestDateStr;
-
-  let isLatestBlockComplete = false;
-  // วนหาจากท้ายขึ้นบนจะเร็วกว่า
-  for (let i = lastRow - 1; i >= 0; i--) {
-    if (markerValues[i][0] === endMarkerLatest) {
-      isLatestBlockComplete = true;
-      break;
-    }
-  }
-  
-  // 2.3 ถ้าบล็อกล่าสุด "ยังไม่สมบูรณ์" -> ให้หยุดทำงานทันที!
-  if (!isLatestBlockComplete) {
-    Logger.log("รอการทำงาน: บล็อกของวันล่าสุด (" + latestDateStr + ") ยังประมวลผลไม่เสร็จ (ไม่พบแถบสิ้นสุด)");
-    return false; // << แก้ไข
-  }
-
-  // 3. ถ้าผ่านทุกด่านแล้ว ถึงจะเริ่มทำงานยุบแถว
-  Logger.log("สถานะสมบูรณ์: บล็อกล่าสุด ("+ latestDateStr +") เสร็จสิ้นแล้ว จะเริ่มทำการยุบแถวเก่า");
-  
-  sheet.showRows(1, sheet.getMaxRows());
-  SpreadsheetApp.flush();
-  
-  const sortedDates = Array.from(allDates).sort((a, b) => b - a);
-  const datesToKeep = new Set(sortedDates.slice(0, DAYS_TO_KEEP).map(ts => new Date(ts).toLocaleDateString('en-CA')));
-  
-  let rowsToHide = [];
-  let currentBlockStart = -1;
-  
-  for (let i = 0; i < lastRow; i++) {
-    const markerText = markerValues[i][0];
-    if (!markerText.includes("---")) continue;
-    const match = markerText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
-    if (match) {
-      const dateStringForCheck = new Date(match[3], parseInt(match[2], 10) - 1, match[1], 12).toLocaleDateString('en-CA');
-      if (!datesToKeep.has(dateStringForCheck)) {
-        if (markerText.includes("--- เริ่มต้น")) {
-          currentBlockStart = i + 1;
+    // วนลูปอีกครั้งเพื่อหา "แถวสิ้นสุด" ของแต่ละวัน (วิธีนี้แม่นยำกว่า)
+    for (let i = 0; i < lastRow; i++) {
+        const markerText = markerValues[i][0].trim();
+        if (markerText.startsWith("--- สิ้นสุดการประมวลผลวันที่")) {
+            const match = markerText.match(/(\d{2})\/(\d{2})\/(\d{4})/);
+            if (match) {
+                const dateStr = `${match[3]}-${match[2]}-${match[1]}`;
+                if (dateBlocks[dateStr]) {
+                    dateBlocks[dateStr].end = i + 1;
+                }
+            }
         }
-        if (markerText.includes("--- สิ้นสุด") && currentBlockStart !== -1) {
-          rowsToHide.push({ start: currentBlockStart, end: i + 1 });
-          currentBlockStart = -1;
-        }
-      }
     }
-  }
 
-  if (rowsToHide.length > 0) {
-    Logger.log(`กำลังจะซ่อน ${rowsToHide.length} บล็อก...`);
-    sheet.showRows(1, lastRow); // แสดงทั้งหมดก่อน เพื่อให้การซ่อนแม่นยำ
+    // กรองเอาเฉพาะบล็อกที่มีครบทั้ง start และ end
+    const completeBlocks = Object.entries(dateBlocks).filter(([_, value]) => value.end !== -1);
+    
+    if (completeBlocks.length <= DAYS_TO_KEEP) {
+      Logger.log(`มีบล็อกข้อมูลที่สมบูรณ์เพียง ${completeBlocks.length} วัน, ยังไม่ยุบ`);
+      return false;
+    }
+
+    // --- Step 2: เรียงลำดับจาก Timestamp (แม่นยำที่สุด) ---
+    completeBlocks.sort((a, b) => b[1].timestamp - a[1].timestamp);
+    
+    const blocksToKeep = completeBlocks.slice(0, DAYS_TO_KEEP);
+    const blocksToHide = completeBlocks.slice(DAYS_TO_KEEP);
+    
+    Logger.log(`วันที่ต้องเก็บไว้: ${blocksToKeep.map(b => b[0]).join(', ')}`);
+    Logger.log(`จะทำการยุบข้อมูลของวันที่: ${blocksToHide.map(b => b[0]).join(', ')}`);
+    
+    if (blocksToHide.length === 0) return false;
+
+    // --- Step 3: ยุบแถวตามบล็อกที่เลือกไว้ ---
+    sheet.showRows(1, sheet.getMaxRows());
     SpreadsheetApp.flush();
-    for (let i = rowsToHide.length - 1; i >= 0; i--) {
-      const block = rowsToHide[i];
+
+    for (const [dateStr, block] of blocksToHide) {
       sheet.hideRows(block.start, block.end - block.start + 1);
     }
-    return true; // <<<< คืนค่า true เพราะได้ทำงานยุบแถวจริง
-  } else {
-    Logger.log("ไม่พบแถวเก่าที่ต้องซ่อน");
-    return false; // <<<< คืนค่า false เพราะไม่ได้ทำอะไร
+    
+    Logger.log(`ยุบแถวสำเร็จทั้งหมด ${blocksToHide.length} บล็อก`);
+    return true;
+
+  } catch (e) {
+    Logger.log(`เกิดข้อผิดพลาดร้ายแรง: ${e.message}\n${e.stack}`);
+    return null;
   }
 }
 
@@ -857,6 +828,66 @@ function applyFormattingRule(sheet, rules, dateColumnIndex, headerRowIndex, high
 }
 
 
+/**
+ * ฟังก์ชันสำหรับ DEBUG ขั้นสุดท้าย (เทียบรหัสตัวอักษร)
+ */
+function finalDebugCompareStrings() {
+  const SHEET_NAME = "Transaction";
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const sheet = ss.getSheetByName(SHEET_NAME);
+  if (!sheet) {
+    Logger.log("หาชีต 'Transaction' ไม่เจอ!");
+    return;
+  }
 
+  const lastRow = sheet.getLastRow();
+  const markerValues = sheet.getRange(1, 1, lastRow, 1).getDisplayValues();
 
+  // 1. หาข้อความจากชีต (แถวสุดท้ายที่มีคำว่า "สิ้นสุด")
+  let textFromSheet = "";
+  for (let i = lastRow - 1; i >= 0; i--) {
+    if (markerValues[i][0].includes("สิ้นสุด")) {
+      textFromSheet = markerValues[i][0];
+      Logger.log(`พบข้อความที่น่าจะใช่ในแถวที่ ${i + 1}: "${textFromSheet}"`);
+      break;
+    }
+  }
 
+  if (textFromSheet === "") {
+    Logger.log("หาแถวที่มีคำว่า 'สิ้นสุด' ไม่เจอเลย");
+    return;
+  }
+
+  // 2. สร้างข้อความเปรียบเทียบ
+  const dateStr = "16/07/2025"; // เราใช้ค่านี้ตาม Log ที่มีปัญหา
+  const textToCompare = "--- สิ้นสุดการประมวลผลวันที่ " + dateStr;
+
+  Logger.log(`===========================================================`);
+  Logger.log(`จะเริ่มเทียบข้อความ 2 ชุดนี้แบบตัวต่อตัว...`);
+  Logger.log(`(1) จากชีต: "${textFromSheet}" (ความยาว: ${textFromSheet.length})`);
+  Logger.log(`(2) ที่สร้างขึ้น: "${textToCompare}" (ความยาว: ${textToCompare.length})`);
+  Logger.log(`===========================================================`);
+
+  let hasMismatch = false;
+  const maxLength = Math.max(textFromSheet.length, textToCompare.length);
+
+  for (let i = 0; i < maxLength; i++) {
+    const char1 = textFromSheet[i] || "[ไม่มี]";
+    const char2 = textToCompare[i] || "[ไม่มี]";
+    const code1 = char1.charCodeAt(0) || "N/A";
+    const code2 = char2.charCodeAt(0) || "N/A";
+
+    if (char1 !== char2) {
+      hasMismatch = true;
+      Logger.log(`💥 พบจุดที่ต่างกัน! ที่ตำแหน่งที่ ${i}`);
+      Logger.log(`   - จากชีต: ตัวอักษร '${char1}' (รหัส: ${code1})`);
+      Logger.log(`   - ที่สร้างขึ้น: ตัวอักษร '${char2}' (รหัส: ${code2})`);
+    }
+  }
+
+  if (!hasMismatch) {
+    Logger.log("🎉🎉🎉 ผลการตรวจสอบ: ข้อความทั้งสองเหมือนกันทุกประการจริงๆ");
+  } else {
+    Logger.log("🔥🔥🔥 สรุป: พบความแตกต่างของอักขระตามที่ระบุไว้ข้างบนครับ");
+  }
+}

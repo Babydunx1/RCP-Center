@@ -331,10 +331,13 @@ function runCollapseLogic_Transaction() {
     const allDates = new Set();
     let latestDateTimestamp = 0;
 
+    // 🔥🔥🔥 [จุดเดียวที่แก้ไข: เพิ่มความแข็งแกร่ง] 🔥🔥🔥
+    // ฟังก์ชันนี้จะ "บด" ข้อความให้เหลือแต่ตัวอักษรและตัวเลข ทำให้การเปรียบเทียบไม่มีทางพลาด
     const normalizeForCompare = (str) => {
       if (typeof str !== 'string') return '';
-      return str.replace(/\s/g, '');
+      return str.replace(/[^A-Za-z0-9ก-๙]/g, '');
     };
+    // 🔥🔥🔥 [จบจุดแก้ไข] 🔥🔥🔥
 
     for (let i = 0; i < lastRow; i++) {
       const markerText = markerValues[i][0].trim();
@@ -351,20 +354,21 @@ function runCollapseLogic_Transaction() {
       }
     }
     
-    if (allDates.size < DAYS_TO_KEEP) {
-      Logger.log(`มีข้อมูลเพียง ${allDates.size} วัน, ยังไม่ยุบ`);
+    if (allDates.size <= DAYS_TO_KEEP) { // <-- แก้ไขเป็น <= เพื่อให้แม่นยำขึ้น
+      Logger.log(`มีข้อมูลที่สมบูรณ์น้อยกว่าหรือเท่ากับ ${DAYS_TO_KEEP} วัน, ยังไม่ยุบ`);
       return false;
     }
 
     const latestDateInSheet = new Date(latestDateTimestamp);
     const latestDateInSheetStr = Utilities.formatDate(latestDateInSheet, "GMT+7", "dd/MM/yyyy");
 
-    // 🔥🔥🔥 [ด่านที่ 1: เช็คว่าบล็อกล่าสุดสมบูรณ์หรือไม่] 🔥🔥🔥
+    // [ด่านที่ 1: เช็คว่าบล็อกล่าสุดสมบูรณ์หรือไม่]
     const endMarkerToFind = "--- สิ้นสุดการประมวลผลวันที่ " + latestDateInSheetStr + " ---";
     const normalizedEndMarker = normalizeForCompare(endMarkerToFind);
 
     let isLatestBlockComplete = false;
     for (let i = lastRow - 1; i >= 0; i--) {
+      // ใช้ฟังก์ชันใหม่ในการเปรียบเทียบ
       if (normalizeForCompare(markerValues[i][0]) === normalizedEndMarker) {
         isLatestBlockComplete = true;
         break;
@@ -376,7 +380,7 @@ function runCollapseLogic_Transaction() {
       return false;
     }
 
-    // 🔥🔥🔥 [ด่านที่ 2: เช็คว่าบล็อกที่สมบูรณ์ล่าสุด คือ "วันนี้" หรือไม่] 🔥🔥🔥
+    // [ด่านที่ 2: เช็คว่าบล็อกที่สมบูรณ์ล่าสุด คือ "วันนี้" หรือไม่]
     const today = new Date();
     const todayStr = Utilities.formatDate(today, "GMT+7", "dd/MM/yyyy");
 
