@@ -303,6 +303,17 @@ if __name__ == '__main__':
             g_sheet_client = g_sheet_api.get_gspread_client()
             master_workbook_main = retry_api_call(g_sheet_client.open_by_url, MASTER_SHEET_URL) # <<< แก้ไข: เรียกใช้ retry_api_call ตรงๆ
             config_sheet_main = retry_api_call(master_workbook_main.worksheet, CONFIG_SHEET_NAME) # <<< แก้ไข: เรียกใช้ retry_api_call ตรงๆ
+             # --- [แทรกโค้ดบล็อกนี้เข้าไป] ---
+            print("    🧹 กำลังตรวจสอบและล้างคอลัมน์ส่วนเกิน (M-S)...")
+            transaction_sheet_main = retry_api_call(master_workbook_main.worksheet, TRANSACTION_SHEET_NAME)
+            # เราจะลบคอลัมน์ที่ 13 (M) ออกไป 7 ครั้ง (M, N, O, P, Q, R, S)
+            for _ in range(7):
+                # เช็คก่อนว่ามีคอลัมน์เกินหรือไม่
+                if transaction_sheet_main.col_count > 12:
+                    retry_api_call(transaction_sheet_main.delete_columns, 13) # 13 คือคอลัมน์ M
+                    time.sleep(0.5) # พักให้ API ทำงาน
+            print("    ✅ ล้างคอลัมน์ส่วนเกินเรียบร้อยแล้ว")
+            # --- [จบส่วนที่แทรก] ---
 
             # สั่งอัปเดตเซลล์เพื่อเก็บป้าย
             retry_api_call(config_sheet_main.update_acell, LOCK_CELL, "IDLE") # <<< แก้ไข: เรียกใช้ retry_api_call ตรงๆ
