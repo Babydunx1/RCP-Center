@@ -2,6 +2,7 @@
 <html lang="th">
 <head>
     <meta charset="UTF-8">
+    <style>body { visibility: hidden; }</style>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>RCP Center | Dashboard</title>
     
@@ -16,13 +17,16 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
     <!-- YOUR CSS -->
     <link rel="stylesheet" href="static/css/rcp_style.css"> <!-- เพิ่มตรงนี้ -->
+    <link rel="stylesheet" href="static/css/swal_custom_style.css">
     <link rel="stylesheet" href="static/css/staffs_page_style.css"> <!-- เพิ่มตรงนี้ -->
     <link rel="stylesheet" href="static/css/Profire_style.css">
     <link rel="stylesheet" href="static/css/login_style.css">
     <link rel="stylesheet" href="static/css/Leaves_management_style.css">
+    
     <title>Staffs Page - Final Design</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <include file="loader.html">
     
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -31,7 +35,7 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
 <body class="rcp-dashboard-body">
-<!-- ...body... -->
+
 
     <!-- ====== APP CONTAINER (โชว์หลัง login) ====== -->
     <div id="app-container" class="hidden-view">
@@ -92,8 +96,17 @@
                         <!-- ▶ ปุ่ม Reload -->
 
                         <div id="time-display-home" class="text-2xl font-semibold text-gray-700 bg-white px-4 py-2 rounded-lg shadow-sm"></div>
-                        <span id="top-right-user-name" class="text-lg font-semibold text-gray-800"></span>
-                        <img src="https://i.pravatar.cc/50?img=1" alt="Avatar" id="top-right-avatar" class="w-12 h-12 rounded-full">
+                        <!-- วางตรงเดียวกับบล็อกเดิม เลย -->
+                        <div id="avatar-wrapper" class="relative w-12 h-12">
+                        <!-- 1) Skeleton placeholder -->
+                        <div id="avatar-skeleton" class="avatar-skeleton"></div>
+                        <!-- 2) รูปจริง (ซ่อนก่อนด้วย hidden) -->
+                        <img id="top-right-avatar"
+                            class="absolute inset-0 w-full h-full rounded-full object-cover"
+                            alt="Avatar"
+                            hidden
+                        >
+                        </div>
                     </div>
                 </header>
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -802,14 +815,24 @@
                     <div class="main-content-wrapper">
                         <div class="leaves-management-header">
                             <span class="date-text-header" id="current-date-display">ส่งคลิปประจำวันที่ xx/xxxx</span>
-                            <div class="leaves-actions">
-                                <div class="search-leaves-box">
-                                    <input type="text" placeholder="Search leaves...">
-                                    <i class="fas fa-search"></i>
-                                </div>
-                                <a href="#" data-view="monthly-summary" class="summary-btn">ภาพรวมทั้งเดือน</a>
-                                <button class="summary-btn">ปฏิทิน</button>
-                                <button class="add-new-leaves-btn">+ Add New Leaves</button>
+                            <div class="leaves-actions flex items-center gap-4">
+                            <div class="search-leaves-box"> 
+                                <input id="leaves-search-input" type="text" placeholder="Search leaves…">
+                                
+                            </div>
+                            <a href="#" data-view="monthly-summary" class="summary-btn">ภาพรวมทั้งเดือน</a>
+                            <button id="leaves-calendar-button" class="summary-btn">ปฏิทิน</button>
+                            <input
+                                type="text"
+                                id="leaves-date-picker"
+                                class="flatpickr-hidden"
+                                placeholder="Select date"
+                            />
+
+                            <!-- ปุ่ม ปฏิทิน พร้อม id -->
+                            
+
+                            <button class="add-new-leaves-btn">+ Add New Leaves</button>
                             </div>
                         </div>
 
@@ -1212,6 +1235,7 @@
     <!-- Flatpickr JS -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script> 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/l10n/th.js"></script>
     <!-- YOUR APP JS -->
      <script src="static/js/stats_view.js"></script> 
     <!-- Profile Picture Selection Modal -->
@@ -1229,6 +1253,7 @@
 
     <script src="static/js/rcp_app.js"></script> <!-- เพิ่มตรงนี้ -->
     <script src="static/js/summary_views.js"></script>
+    
 
     
 

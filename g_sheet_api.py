@@ -41,8 +41,10 @@ def get_leaves_list_data(sheet_url, year, month, day, monthly_data_cache=None, s
             daily_data = summary.get('dailyData', {})
             
             # ใช้ day ที่ส่งมาจาก parameter ในการดึงข้อมูล
-            sent_today = daily_data.get(day, {}).get('clips', 0)
-            status_today_en = daily_data.get(day, {}).get('status', 'nodata')
+            daily_key = str(day)
+            day_data = daily_data.get(daily_key, daily_data.get(day, {}))
+            sent_today = day_data.get('clips', 0)
+            status_today_en = day_data.get('status', 'nodata')
 
             status_map = {
                 'complete': 'ส่งครบ',
@@ -73,6 +75,7 @@ def get_leaves_list_data(sheet_url, year, month, day, monthly_data_cache=None, s
         return []
 
 def get_monthly_summary_data(sheet_url, year, month):
+    print("[TRACE] Called from:", traceback.format_stack(limit=2)[0])
     """
     ดึงและประมวลผลข้อมูลจากชีต 'Monthly_Summary' สำหรับเดือนและปีที่ระบุ
     """

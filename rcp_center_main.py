@@ -1,4 +1,7 @@
+import email
 import webview
+from pathlib import Path
+
 import threading
 import json
 import os
@@ -7,6 +10,8 @@ import sys
 import time
 import traceback  # ✅✅✅ เพิ่มบรรทัดนี้เข้าไปครับ ✅✅✅
 from datetime import datetime # Added this line
+import keyring
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import g_sheet_api
 from g_sheet_api import (
@@ -43,7 +48,7 @@ def _save_cache(name: str, data):
     path = _cache_file(name)
     with open(path, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False)
-    print(f"[DEBUG][Cache] Saved disk cache for '{name}'")
+    print(f"[DEBUG][Cache] Saved disk cache for '{name}' with data: {data}") # ✅เพิ่ม Debug
 
     # ▶ เพิ่มสองบรรทัดนี้ ต่อท้าย helper block เลย
 _load_file_cache = _load_cache
@@ -69,29 +74,160 @@ def get_path(relative_path):
 
 class Api:
 
-    def get_staffs_cached(self, max_age_sec=300):
-        """ดึงหน้าตาราง Staffs (cache เป็นไฟล์)"""
-        name = 'staffs'
-        data = _load_cache(name)
-        if data is not None:
-            return data
+    def __init__(self, sheet_url):
+        self.sheet_url = sheet_url
+        self.current_user = None
+        self.window = None
+        self._staffs_cache = None
+        self._staffs_cache_time = 0
+        self._monthly_summary_cache = {} # Cache for monthly data { (year, month): data }
+        self._monthly_summary_cache_time = {} # Timestamp for each cache entry
+        self._transaction_cache = None
+        self._transaction_cache_time = 0
+        self._employee_sheet_cache      = {}
+        self._employee_sheet_cache_time = {}
+        self.allowed_projects = []  # เก็บข้อมูลโปรเจกต์จากสิทธิ์ของผู้ใช้
+        
+        
 
-        print("[Cache] fetching new 'staffs'")
-        staffs = get_staffs_data(self.sheet_url, sheet_name="Staffs")
-        _save_cache(name, staffs)
-        return staffs
+    def preload_all_projects(self, user_email: str):
+        try:
+            # ดึงพนักงานทั้งหมดจาก Project Admin
+            staffs = get_employee_sheet("Project Admin")
 
-    def get_transaction_cached(self, max_age_sec=3600):
+            # หา record ของคน login
+            current_user = next(
+                (s for s in staffs if s.get("E-Mail", "").strip().lower() == user_email.strip().lower()),
+                None
+            )
+
+            if not current_user:
+                print(f"[Preload] ไม่พบข้อมูลผู้ใช้ {user_email}")
+                return
+
+            user_role = current_user.get("Role", "user").lower()
+            year = datetime.now().year
+            month = datetime.now().month
+
+            if user_role == "admin":
+                # preload ทุกโปรเจกต์ (admin)
+                project_names = sorted(set(
+                    s.get("Project Name", "").strip()
+                    for s in staffs if s.get("Project Name", "").strip()
+                ))
+            else:
+                # preload เฉพาะโปรเจกต์ของตัวเอง
+                project_name = current_user.get("Project Name", "").strip()
+                if not project_name:
+                    print(f"[Preload] ผู้ใช้ไม่มีชื่อโปรเจกต์")
+                    return
+                project_names = [project_name]
+
+            for project in project_names:
+                try:
+                    print(f"[Preload] Loading data for {project}")
+                    get_employee_sheet(project)
+                    get_project_transactions(project)
+                    get_monthly_summary_cached(project, year, month)
+                    print(f"[Preload] {project} loaded.")
+                except Exception as e:
+                    print(f"[Preload] Failed to load {project}: {e}")
+
+        except Exception as e:
+            print(f"[Preload] Cannot fetch Project Admin sheet: {e}")   
+        
+
+
+
+    def preload_projects_sheets(self):
+        no_cache_count = 0  # นับว่ามีกี่อันที่ไม่มีแคชเลย
+
+        def load_sheet(sheet_name):
+            nonlocal no_cache_count
+            cache_key = f"sheet_{sheet_name.lower().replace(' ', '_')}"
+            if not self._is_cache_valid(cache_key):
+                no_cache_count += 1
+                try:
+                    print(f"[DEBUG] Fetching data for {sheet_name}")
+                    data = get_employee_sheet(self.sheet_url, sheet_name).get('reels', [])
+                    self._save_file_cache(cache_key, data)
+                    print(f"[DEBUG] Cached data for {sheet_name}")
+                except Exception as e:
+                    print(f"[ERROR] Failed fetching {sheet_name}: {e}")
+                time.sleep(1)  # ป้องกันยิง API รัวเกินถ้าไม่มีแคช
+            else:
+                print(f"[Cache] Loaded RAM or disk cache for '{cache_key}'")
+
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            futures = [executor.submit(load_sheet, sheet) for sheet in self.allowed_projects]
+            for _ in as_completed(futures):
+                pass  # ให้รอให้ทุก sheet ทำเสร็จ
+
+        print(f"[DEBUG] Preload complete. No-cache count: {no_cache_count}")
+
+    def _is_cache_valid(self, key, max_age_sec=3600):
+        cache_time = getattr(self, '_cache_time', {}).get(key, 0)
+        return (time.time() - cache_time) < max_age_sec
+
+    def get_staffs_cached(self, max_age_sec=3600):
+        """
+        ดึงข้อมูล Staffs โดยใช้ระบบ Cache 3 ชั้น:
+        1) RAM cache (self._staffs_cache)
+        2) Disk cache (cache/staffs.json)
+        3) Fetch ใหม่จาก Google Sheets
+        """
+        import time
         now = time.time()
 
-        # 1) ดูในหน่วยความจำก่อน
-        if self._transaction_cache and (now - self._transaction_cache_time < max_age_sec):
+        # 1) RAM cache
+        if getattr(self, '_staffs_cache', None) and \
+        (now - getattr(self, '_staffs_cache_time', 0) < max_age_sec):
+            print("[DEBUG][Cache] Using RAM cache for Staffs")
+            return self._staffs_cache
+
+        # 2) Disk cache
+        disk = _load_file_cache('staffs')
+        if disk is not None:
+            print("[DEBUG][Cache] Loaded disk cache for Staffs")
+            self._staffs_cache = disk
+            self._staffs_cache_time = now
+            return disk
+
+        # 3) Fetch ใหม่จาก API
+        print("[DEBUG][Cache] Fetching new Staffs data from API")
+        try:
+            staffs = get_staffs_data(self.sheet_url, sheet_name="Staffs")
+            # เก็บกลับทั้ง RAM & disk
+            self._staffs_cache = staffs
+            self._staffs_cache_time = now
+            _save_file_cache('staffs', staffs)
+            return staffs
+        except Exception as e:
+            print(f"[ERROR][Python API] Failed to load staffs data: {e}")
+            # เคลียร์ cache เพื่อรอบถัดไปจะได้ลอง fetch ใหม่
+            self._staffs_cache = None
+            self._staffs_cache_time = 0
+            return []
+
+    def get_transaction_cached(self, max_age_sec=3600):
+        """
+        ดึงข้อมูลจากชีต Transaction โดยใช้ระบบ Cache:
+        1) RAM cache (self._transaction_cache)
+        2) Disk cache (cache/transaction.json ผ่าน _load_file_cache)
+        3) Fetch ใหม่จาก Google Sheets แล้วเก็บกลับทั้ง RAM & disk
+        """
+        now = time.time()
+
+        # 1) ตรวจสอบ RAM cache ก่อน
+        if getattr(self, '_transaction_cache', None) and \
+           (now - getattr(self, '_transaction_cache_time', 0) < max_age_sec):
             print("[DEBUG][Cache] Using RAM cache for Transaction")
             return self._transaction_cache
 
-        # 2) ถ้า RAM หมดอายุ ลองดูในไฟล์ก่อน
+        # 2) ถ้า RAM หมดอายุ ลองโหลดจาก disk cache
         disk = _load_file_cache('transaction')
         if disk is not None:
+            print("[DEBUG][Cache] Loaded disk cache for Transaction")
             self._transaction_cache = disk
             self._transaction_cache_time = now
             return disk
@@ -99,14 +235,20 @@ class Api:
         # 3) สุดท้าย fetch ใหม่จาก Google Sheets
         print("[DEBUG][Cache] Fetching new Transaction data from API")
         try:
-            transactions = g_sheet_api.get_staffs_data(self.sheet_url, sheet_name="Transaction")
+            transactions = g_sheet_api.get_staffs_data(
+                self.sheet_url,
+                sheet_name="Transaction"
+            )
+            # เก็บกลับทั้ง RAM & disk
             self._transaction_cache = transactions
             self._transaction_cache_time = now
             _save_file_cache('transaction', transactions)
             return transactions
         except Exception as e:
             print(f"[ERROR][Python API] Failed to load transaction data: {e}")
+            # เคลียร์ cache เพื่อรอบถัดไปจะได้ลองใหม่
             self._transaction_cache = None
+            self._transaction_cache_time = 0
             return []
 
     def get_employee_sheet_cached(self, sheet_name, max_age_sec=3600):
@@ -122,27 +264,35 @@ class Api:
         return lst
 
     def get_monthly_summary_cached(self, year, month, max_age_sec=3600):
-        key = f"summary_{year}_{month}"
+        """
+        ดึงข้อมูลสรุปรายเดือนจาก Google Sheets พร้อม cache 3 ชั้น:
+        1) RAM
+        2) Disk (_load_file_cache / _save_file_cache)
+        3) Fetch ใหม่
+        """
+        import time
+        key = (year, month)
         now = time.time()
-        if key in self._monthly_summary_cache and (now - self._monthly_summary_cache_time[key] < max_age_sec):
+
+        # 1) RAM cache
+        if key in self._monthly_summary_cache and (now - self._monthly_summary_cache_time.get(key, 0) < max_age_sec):
             return self._monthly_summary_cache[key]
 
-        disk = _load_file_cache(key)
+        # 2) Disk cache
+        disk = _load_file_cache(f"summary_{year}_{month}")
         if disk is not None:
             self._monthly_summary_cache[key] = disk
             self._monthly_summary_cache_time[key] = now
             return disk
 
-        print(f"[DEBUG][Cache] Fetching new Monthly Summary for {month}/{year}")
-        try:
-            data = get_monthly_summary_data(self.sheet_url, year, month)
-            self._monthly_summary_cache[key] = data
-            self._monthly_summary_cache_time[key] = now
-            _save_file_cache(key, data)
-            return data
-        except Exception as e:
-            print(f"[ERROR][Python API] Failed to load monthly summary: {e}")
-            return []
+        # 3) Fetch ใหม่
+        data = get_monthly_summary_data(self.sheet_url, year, month)
+        self._monthly_summary_cache[key] = data
+        self._monthly_summary_cache_time[key] = now
+        _save_file_cache(f"summary_{year}_{month}", data)
+        return data
+
+       
 
 
     def clear_caches(self):
@@ -162,28 +312,7 @@ class Api:
         return {"status": "ok"}
 
     # ✅✅✅ เพิ่มฟังก์ชันนี้เข้าไปในคลาส Api ✅✅✅
-    def get_transaction_cached(self, max_age_sec=3600):
-        """
-        ดึงข้อมูลจากชีต Transaction โดยใช้ระบบ Cache เพื่อความเร็ว
-        """
-        import time
-        now = time.time()
-        # ถ้ามี Cache อยู่และยังไม่หมดอายุ (5 นาที) ให้ใช้ Cache
-        if self._transaction_cache and (now - self._transaction_cache_time < max_age_sec):
-            print("[DEBUG][Cache] Using cached Transaction data.")
-            return self._transaction_cache
-        
-        # ถ้าไม่มี Cache หรือหมดอายุแล้ว ให้ไปดึงใหม่
-        print("[DEBUG][Cache] Fetching new Transaction data.")
-        try:
-            transactions = g_sheet_api.get_staffs_data(self.sheet_url, sheet_name="Transaction")
-            self._transaction_cache = transactions
-            self._transaction_cache_time = now
-            return transactions
-        except Exception as e:
-            print(f"[ERROR][Python API] Failed to load transaction data (cache): {e}")
-            self._transaction_cache = None # เคลียร์ cache ถ้าดึงข้อมูลใหม่ไม่สำเร็จ
-            return []
+    
 
 
     # วางฟังก์ชันนี้ต่อจากฟังก์ชันอื่นในคลาส Api ได้เลยครับ
@@ -317,6 +446,7 @@ class Api:
         try:
             # === STEP 1: PREPARATION (ส่วนนี้ถูกต้องแล้ว) ===
             selected_date = datetime.strptime(date_str, "%Y-%m-%d")
+            
             possible_date_formats = {
                 selected_date.strftime('%d/%m/%Y'),
                 f"{selected_date.day}/{selected_date.month}/{selected_date.year}"
@@ -403,8 +533,11 @@ class Api:
 
                 if summary_for_staff:
                     daily_dict = summary_for_staff.get('dailyData', {})
+                    # ✅ วางเพิ่มตรงนี้
+                    daily_key = str(selected_date.day)
+                    day_data = daily_dict.get(daily_key, daily_dict.get(selected_date.day, {}))
                     # int-key (18) จะ match กับ processed_data, ถ้าไม่เจอ ค่อยลอง str
-                    day_data = daily_dict.get(selected_date.day) or daily_dict.get(str(selected_date.day))
+                    # ❌ ไม่ต้องใช้บรรทัดนี้อีก เพราะเราใช้ `day_data` ไปแล้ว
                     if day_data:
                         # ✅✅✅ ดึงค่าจากชีตมาแสดงตรงๆ ตามที่ลูกพี่ต้องการสำหรับหน้า Stats ✅✅✅
                         total_clips_today = day_data.get('clips', 0)
@@ -458,37 +591,8 @@ class Api:
             return {"status": "error", "message": str(e)}
         
 
-    def __init__(self, sheet_url):
-        self.sheet_url = sheet_url
-        self.current_user = None
-        self.window = None
-        self._staffs_cache = None
-        self._staffs_cache_time = 0
-        self._monthly_summary_cache = {} # Cache for monthly data { (year, month): data }
-        self._monthly_summary_cache_time = {} # Timestamp for each cache entry
-        self._transaction_cache = None
-        self._transaction_cache_time = 0
-        self._employee_sheet_cache      = {}
-        self._employee_sheet_cache_time = {}
+    
 
-    def get_monthly_summary_cached(self, year, month, max_age_sec=3600):
-        import time
-        now = time.time()
-        cache_key = (year, month)
-
-        if cache_key in self._monthly_summary_cache and (now - self._monthly_summary_cache_time.get(cache_key, 0) < max_age_sec):
-            print(f"[DEBUG][Cache] Using cached summary for {month}/{year}")
-            return self._monthly_summary_cache[cache_key]
-        
-        print(f"[DEBUG][Cache] Fetching new summary for {month}/{year}")
-        try:
-            summary_data = get_monthly_summary_data(self.sheet_url, year, month)
-            self._monthly_summary_cache[cache_key] = summary_data
-            self._monthly_summary_cache_time[cache_key] = now
-            return summary_data
-        except Exception as e:
-            print(f"[ERROR][Python API] Failed to load monthly summary (cache): {e}")
-            return []
 
     def fetch_leaves_list(self, year=None, month=None, day=None):
         """ API สำหรับดึงข้อมูลตารางในหน้า Leaves (รายวัน) """
@@ -533,29 +637,6 @@ class Api:
             print(f"[ERROR][Python API] fetch_monthly_summary failed: {e}")
             return {"status": "error", "message": str(e)}   
 
-
-
-    def get_staffs_cached(self, max_age_sec=3600):
-        now = time.time()
-        if self._staffs_cache and (now - self._staffs_cache_time < max_age_sec):
-            return self._staffs_cache
-
-        disk = _load_file_cache('staffs')
-        if disk is not None:
-            self._staffs_cache = disk
-            self._staffs_cache_time = now
-            return disk
-
-        print("[DEBUG][Cache] Fetching new Staffs data from API")
-        try:
-            staffs = get_staffs_data(self.sheet_url, sheet_name="Staffs")
-            self._staffs_cache = staffs
-            self._staffs_cache_time = now
-            _save_file_cache('staffs', staffs)
-            return staffs
-        except Exception as e:
-            print(f"[ERROR][Python API] Failed to load staffs data: {e}")
-            return []
 
     def login(self, email, remember=False):
         print(f"[DEBUG][Python API] Login request for email: {email}")
@@ -622,13 +703,13 @@ class Api:
         }
         print(f"[DEBUG][Python API] Current user set: {self.current_user}")
 
+        self.preload_all_projects(self.current_user["E-Mail"])  # ✅ key ที่ถูกต้องคือ E-Mail
+
         # 6. บันทึก token ถ้ามี remember
         if remember:
             token_data = {"email": email, "role": role}
-            token_path = os.path.join(os.path.dirname(__file__), 'user_token.json')
-            with open(token_path, 'w', encoding='utf-8') as f:
-                json.dump(token_data, f)
-            print(f"[DEBUG][Python API] Remember Me: Token saved to {token_path}")
+            keyring.set_password('RCP_Center', 'user_token', json.dumps(token_data))
+            print("[DEBUG][Python API] Remember Me: Token saved to OS Keychain")
 
         # 7. Pre-warm caches & project sheets ใน background
         def _prewarm():
@@ -670,32 +751,51 @@ class Api:
         }
 
     def logout(self):
+        """
+        ลบ current_user และลบ token จาก OS Keychain
+        """
+        # เคลียร์ session ฝั่ง Python
         self.current_user = None
-        # Remove token file if exists
-        token_path = os.path.join(os.path.dirname(__file__), 'user_token.json')
-        if os.path.exists(token_path):
-            os.remove(token_path)
-            print(f"[DEBUG][Python API] Token file removed: {token_path}")
+
+        # ลบ token ใน Keychain
+        try:
+            keyring.delete_password('RCP_Center', 'user_token')
+            print("[DEBUG][Python API] Token removed from OS Keychain")
+        except keyring.errors.PasswordDeleteError:
+            # ไม่มี token หรือ ลบไม่สำเร็จก็ไม่ต้องแจ้ง error เพิ่ม
+            pass
+
         print("[DEBUG][Python API] User logged out.")
         return {"status": "ok"}
 
     def auto_login(self):
-        token_path = os.path.join(os.path.dirname(__file__), 'user_token.json')
-        print(f"[DEBUG][Python API] auto_login: Looking for token at {token_path}")
-        if os.path.exists(token_path):
+        """
+        พยายามอ่าน token จาก OS Keychain แล้วเรียก self.login()
+        ถ้าไม่มีหรืออ่านไม่ได้ คืน error เหมือนเดิม
+        """
+        print("[DEBUG][Python API] auto_login: Checking OS Keychain for token")
+        # ดึงข้อมูลจาก Keychain
+        data = keyring.get_password('RCP_Center', 'user_token')
+        if data:
             try:
-                with open(token_path, 'r', encoding='utf-8') as f:
-                    token_data = json.load(f)
+                token_data = json.loads(data)
                 email = token_data.get('email')
-                print(f"[DEBUG][Python API] auto_login: Read token email={email}")
+                print(f"[DEBUG][Python API] auto_login: Retrieved email={email} from Keychain")
                 if email:
+                    # เรียก login เพื่อเซ็ต self.current_user และ pre-warm cache
                     login_result = self.login(email, remember=True)
                     print(f"[DEBUG][Python API] auto_login: login_result={login_result}")
                     return login_result
-            except Exception as e:
-                print(f"[ERROR][Python API] Failed to auto-login: {e}")
+            except json.JSONDecodeError:
+                # ถ้าไฟล์เสียหาย ลบทิ้งใน Keychain
+                print("[ERROR][Python API] auto_login: Invalid token JSON, deleting from Keychain")
+                try:
+                    keyring.delete_password('RCP_Center', 'user_token')
+                except keyring.errors.PasswordDeleteError:
+                    pass
         else:
-            print(f"[DEBUG][Python API] auto_login: Token file not found")
+            print("[DEBUG][Python API] auto_login: No token found in Keychain")
+        
         return {"status": "error", "message": "No valid token found"}
 
     def fetch_employee_data(self, project_id):
@@ -751,10 +851,17 @@ class Api:
             print(f"[ERROR][Python API] fetch_employee_data: Error calling get_employee_sheet: {e}")
             return {"status": "error", "message": str(e)}
 
-    def fetch_staffs_data(self, sheet_url):
-        print(f"[DEBUG][Python API] fetch_staffs_data called for sheet_url: {sheet_url}")
+    def fetch_staffs_data(self, sheet_url: str = None):
+        """
+        Fetch staffs ผ่าน cache layer โดย sheet_url จะเป็น optional:
+          - ถ้า JS ไม่ส่ง URL มา จะใช้ self.sheet_url ที่เก็บตอนสร้าง Api
+          - ถ้า JS ส่งมา ก็ log เอาไว้ แต่ cache ยังทำงานตาม TTL เดิม
+        """
+        # เลือกใช้ URL ที่ถูกต้อง
+        url = sheet_url or self.sheet_url
+        print(f"[DEBUG][Python API] fetch_staffs_data called for sheet_url: {url}")
+
         try:
-            # เปลี่ยนให้ใช้ get_staffs_cached แทน get_staffs_data
             data = self.get_staffs_cached(max_age_sec=300)
             print(f"[DEBUG][Python API] Returning {len(data)} cached staffs")
             return {"status": "ok", "payload": data}
@@ -878,18 +985,40 @@ class Api:
         
         print(f"[DEBUG][Python API] Found {len(image_files)} profile pictures.")
         return {"status": "ok", "payload": image_files}
+    
+
+def resource_url(filename: str) -> str:
+    """
+    คืนค่า file:/// URL ของไฟล์ HTML ในโฟลเดอร์เดียวกับสคริปต์
+    รองรับกรณี build ด้วย PyInstaller (sys._MEIPASS)
+    """
+    if getattr(sys, 'frozen', False):
+        base = Path(sys._MEIPASS)
+    else:
+        base = Path(__file__).parent
+    return (base / filename).resolve().as_uri()
 
 
 if __name__ == '__main__':
     SHEET_URL = 'https://docs.google.com/spreadsheets/d/17lOtuHum9VHdukfHr7143uCGydVZSaJNi2RhzGfh81g/edit#gid=1356715801'
     api = Api(SHEET_URL)
+    # 1) พยายาม auto-login จาก Keychain
+    result = api.auto_login()
+    initial_user = result['payload'] if result.get('status')=='ok' else None
+
+    # 2) เลือกโฟลเดอร์โปรเจกต์ แล้วสั่งให้ pywebview serve ไฟล์
+    base = Path(__file__).parent.resolve()
+    os.chdir(base)
+
+    # 3) สร้าง window แบบ relative path + http_server
     window = webview.create_window(
         'RCP Center',
         'rcp_dashboard.html',
         js_api=api,
-        width=1730,            # ✅ ขนาดเริ่มต้น (เท่ากันเลยถ้าอยากนิ่ง)
-        height=950,            # ความสูงเริ่มต้น (ปรับได้)
-        min_size=(1350, 400)   # ✅ ล็อกความกว้างขั้นต่ำเท่านั้น, ความสูงต่ำสุดตั้งไว้พอไม่พัง
+        width=1730, height=950, min_size=(1350, 400)
     )
+    window.expose(lambda: initial_user)
     api.window = window
-    webview.start(debug=True)
+
+    # 4) start พร้อม HTTP server ในตัว (serve static/js, css, รูป ฯลฯ)
+    webview.start(debug=True, http_server=True)

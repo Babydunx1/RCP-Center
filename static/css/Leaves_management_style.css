@@ -747,3 +747,16 @@
   padding-left:   1rem   !important;
   padding-right:  1rem   !important;
 }
+
+
+/* ปิดการแสดงผล input แต่ยังให้ JS ผูก Flatpickr ได้ */
+.flatpickr-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  padding: 0;
+  margin: 0;
+  border: none;
+  opacity: 0;
+  pointer-events: none;
+}

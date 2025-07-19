@@ -446,6 +446,49 @@ body.rcp-dashboard-body {
 
 /* Responsive layout: ให้ container/table ขยายเต็มขวา รองรับ sidebar fixed ซ้าย */
 
+/* 1) ชื่อคลาสใหม่ สำหรับ avatar placeholder */
+.avatar-skeleton {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: linear-gradient(
+    90deg,
+    rgba(224,224,224,1) 25%,
+    rgba(245,245,245,1) 50%,
+    rgba(224,224,224,1) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  box-shadow: inset 0 0 8px rgba(0,0,0,0.05);
+}
+
+/* 2) keyframes สำหรับขยับ gradient */
+@keyframes shimmer {
+  from   { background-position: -150% 0; }
+  to     { background-position: 150% 0; }
+}
+
+#avatar-btn {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#avatar-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+#avatar-btn:active {
+  transform: scale(0.95);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* ถ้ายังใช้ .avatar-skeleton จากก่อนหน้า ให้คงไว้ครับ */
+.avatar-skeleton { /* ... shimmer code ... */ }
+
+
+
+
 
 
 

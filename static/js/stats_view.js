@@ -12,6 +12,7 @@ window.addEventListener('pywebviewready', function() {
     let currentSelectedEmail = null;
     let flatpickrInstance = null;
     let hasDashboardLoadedOnce = false;
+    const dashboardCache = {};
 
     const employeeListContainer = statsView.querySelector('.epd-employee-list');
     const mainHeaderName = statsView.querySelector('#epd-employee-main-name');
@@ -109,23 +110,19 @@ window.addEventListener('pywebviewready', function() {
      * ดึงข้อมูลแดชบอร์ด (เวอร์ชันฉลาด - ใช้ Cache + API ใหม่)
      */
     async function fetchAndRenderDashboard(email, dateStr) {
-        // ถ้าข้อมูลเพิ่งโหลดมาแล้ว ไม่ต้อง clear อีก
-        if (!hasDashboardLoadedOnce) {
-            showLoadingState('แดชบอร์ด');
-            hasDashboardLoadedOnce = true;
-            }
-        
-        // --- 1. ดึงข้อมูล KPI จาก Cache ที่หน้า Leaves โหลดไว้ (ถ้ามี) ---
-        // (ส่วนนี้เราจะมาทำต่อในอนาคตเพื่อให้สมบูรณ์แบบ ตอนนี้จะใช้ข้อมูลจาก API หลักไปก่อน)
-        // TODO: Implement caching from Leaves view data
+        const key = `${email}_${dateStr}`;
+        if (dashboardCache[key]) {
+            const cachedData = dashboardCache[key];
+            renderKpiCards(cachedData.kpi_cards);
+            renderPageCards(cachedData.page_cards);
+            return;
+        }
 
-        // --- 2. เรียก API ใหม่เพื่อดึงข้อมูล Page Cards ---
+        // ดึงข้อมูลใหม่จาก backend
         try {
-            // เราจะเรียกใช้ API ตัวหลักที่เราทำไว้ก่อนหน้า ซึ่งตอนนี้มีข้อมูลครบแล้ว
             const res = await window.pywebview.api.get_employee_dashboard_data(email, dateStr);
-
             if (res.status === 'ok') {
-                // แสดงผลทั้ง KPI Cards และ Page Cards จากข้อมูลที่ได้รับ
+                dashboardCache[key] = res.payload;  // ✨ Cache ไว้
                 renderKpiCards(res.payload.kpi_cards);
                 renderPageCards(res.payload.page_cards);
             } else {

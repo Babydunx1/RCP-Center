@@ -1,95 +1,48 @@
 // This file combines code from monthly_all_summary_script.js and summary_detail_script.js
 
+
+
 // ==== SECTION: Monthly Summary (ภาพรวมทั้งเดือน) ====
 function initMonthlySummaryView() {
-    const allSummaryTbody = document.getElementById('all-summary-tbody');
-    const monthlySummaryTitle = document.getElementById('monthly-summary-title');
+    console.log('initMonthlySummaryView running');
+
+    const allSummaryTbody       = document.getElementById('all-summary-tbody');
+    const monthlySummaryTitle  = document.getElementById('monthly-summary-title');
+    // Removed Flatpickr related elements from here
+
+    // 1) กำหนดวันที่เริ่มต้นเป็นวันนี้ แล้วอัพเดต title
+    const today     = new Date();
+    const defYear   = today.getFullYear();
+    const defMonth  = today.getMonth() + 1; // 1–12
+    monthlySummaryTitle.textContent =
+      `ภาพรวมการส่งคลิปประจำเดือน: ${monthly_getMonthName(defMonth)} ${defYear}`;
+
+    // Removed Flatpickr initialization and button listener from here
+
+    // 4) เรียก fetch ข้อมูลครั้งแรก (เดือนปัจจุบัน)
+    monthly_fetchAndDisplayAllSummaryData(defYear, defMonth);
+
     const selectMonth = document.getElementById('select-month');
     const selectYear = document.getElementById('select-year');
-    const viewDataBtn = document.getElementById('view-summary-data-btn');
+    const viewSummaryDataBtn = document.getElementById('view-summary-data-btn');
 
-    // กำหนดเดือนและปีปัจจุบัน (หรือที่ต้องการแสดงผลเริ่มต้น)
-    const currentMonth = new Date().getMonth() + 1; // getMonth() returns 0-11
-    const currentYear = new Date().getFullYear();
-    if (selectMonth) selectMonth.value = currentMonth;
-    if (selectYear) selectYear.value = currentYear;
+    if (selectMonth && selectYear && viewSummaryDataBtn) {
+        const updateSummaryData = () => {
+            const year = parseInt(selectYear.value);
+            const month = parseInt(selectMonth.value);
+            monthly_fetchAndDisplayAllSummaryData(year, month);
+        };
 
-    if (monthlySummaryTitle) monthlySummaryTitle.textContent = `ภาพรวมการส่งคลิปประจำเดือน: ${monthly_getMonthName(currentMonth)} ${currentYear}`;
-
-    // --- ส่วนที่แก้ไข: เพิ่ม Event Listener ให้ปุ่ม "ดูข้อมูล" ---
-    if (viewDataBtn) {
-        viewDataBtn.addEventListener('click', () => {
-            const selectedMonth = parseInt(selectMonth.value, 10);
-            const selectedYear = parseInt(selectYear.value, 10);
-            monthlySummaryTitle.textContent = `ภาพรวมการส่งคลิปประจำเดือน: ${monthly_getMonthName(selectedMonth)} ${selectedYear}`;
-            // ส่ง ปี และ เดือน ไปให้ฟังก์ชัน fetch
-            monthly_fetchAndDisplayAllSummaryData(selectedYear, selectedMonth);
-        });
-    }
-
-    // เรียกใช้งานครั้งแรกเมื่อเปิดหน้า
-    if (viewDataBtn) {
-        viewDataBtn.click();
+        viewSummaryDataBtn.addEventListener('click', updateSummaryData);
+        // Optionally, you could also add 'change' listeners to selectMonth and selectYear
+        // selectMonth.addEventListener('change', updateSummaryData);
+        // selectYear.addEventListener('change', updateSummaryData);
     }
 }
 
-/*
-// --- START: Dummy Data (ข้อมูลจำลอง) - คอมเมนต์เก็บไว้ ---
-const monthly_allDummyData = [
-    {
-        projectName: "Project Alpha",
-        name: "สมศรี มีสุข",
-        dailyData: {
-            1: { status: "complete", clips: 5 }, 2: { status: "complete", clips: 5 }, 3: { status: "holiday", text: "หยุด" },
-            4: { status: "complete", clips: 5 }, 5: { status: "complete", clips: 5 }, 6: { status: "complete", clips: 5 },
-            7: { status: "complete", clips: 5 }, 8: { status: "complete", clips: 5 }, 9: { status: "complete", clips: 5 },
-            10: { status: "complete", clips: 5 }, 11: { status: "complete", clips: 5 }, 12: { status: "complete", clips: 5 },
-            13: { status: "complete", clips: 5 }, 14: { status: "complete", clips: 5 }, 15: { status: "complete", clips: 5 },
-            16: { status: "complete", clips: 5 }, 17: { status: "complete", clips: 5 }, 18: { status: "complete", clips: 5 },
-            19: { status: "complete", clips: 5 }, 20: { status: "complete", clips: 5 }, 21: { status: "complete", clips: 5 },
-            22: { status: "holiday", text: "หยุด" }, 23: { status: "complete", clips: 5 }, 24: { status: "complete", clips: 5 },
-            25: { status: "complete", clips: 5 }, 26: { status: "complete", clips: 5 }, 27: { status: "complete", clips: 5 },
-            28: { status: "complete", clips: 5 }, 29: { status: "complete", clips: 5 }, 30: { status: "complete", clips: 5 },
-            31: { status: "nodata", text: "" }
-        }
-    },
-    {
-        projectName: "Project Beta",
-        name: "สมชาย ใจดี",
-        dailyData: {
-            1: { status: "complete", clips: 3 }, 2: { status: "complete", clips: 3 }, 3: { status: "missing", text: "ขาด" },
-            4: { status: "complete", clips: 3 }, 5: { status: "complete", clips: 3 }, 6: { status: "complete", clips: 3 },
-            7: { status: "missing", text: "ขาด" }, 8: { status: "complete", clips: 3 }, 9: { status: "complete", clips: 3 },
-            10: { status: "holiday", text: "หยุด" }, 11: { status: "complete", clips: 3 }, 12: { status: "complete", clips: 3 },
-            13: { status: "missing", text: "ขาด" }, 14: { status: "complete", clips: 3 }, 15: { status: "complete", clips: 3 },
-            16: { status: "complete", clips: 3 }, 17: { status: "complete", clips: 3 }, 18: { status: "complete", clips: 3 },
-            19: { status: "missing", text: "ขาด" }, 20: { status: "complete", clips: 3 }, 21: { status: "complete", clips: 3 },
-            22: { status: "complete", clips: 3 }, 23: { status: "complete", clips: 3 }, 24: { status: "complete", clips: 3 },
-            25: { status: "complete", clips: 3 }, 26: { status: "missing", text: "ขาด" }, 27: { status: "complete", clips: 3 },
-            28: { status: "complete", clips: 3 }, 29: { status: "complete", clips: 3 }, 30: { status: "complete", clips: 3 },
-            31: { status: "nodata", text: "" }
-        }
-    },
-    {
-        projectName: "Project Gamma",
-        name: "นารี รักการงาน",
-        dailyData: {
-            1: { status: "complete", clips: 4 }, 2: { status: "complete", clips: 4 }, 3: { status: "complete", clips: 4 },
-            4: { status: "complete", clips: 4 }, 5: { status: "complete", clips: 4 }, 6: { status: "complete", clips: 4 },
-            7: { status: "complete", clips: 4 }, 8: { status: "complete", clips: 4 }, 9: { status: "complete", clips: 4 },
-            10: { status: "complete", clips: 4 }, 11: { status: "complete", clips: 4 }, 12: { status: "complete", clips: 4 },
-            13: { status: "complete", clips: 4 }, 14: { status: "complete", clips: 4 }, 15: { status: "complete", clips: 4 },
-            16: { status: "complete", clips: 4 }, 17: { status: "complete", clips: 4 }, 18: { status: "complete", clips: 4 },
-            19: { status: "complete", clips: 4 }, 20: { status: "complete", clips: 4 }, 21: { status: "complete", clips: 4 },
-            22: { status: "complete", clips: 4 }, 23: { status: "complete", clips: 4 }, 24: { status: "complete", clips: 4 },
-            25: { status: "complete", clips: 4 }, 26: { status: "complete", clips: 4 }, 27: { status: "complete", clips: 4 },
-            28: { status: "complete", clips: 4 }, 29: { status: "complete", clips: 4 }, 30: { status: "complete", clips: 4 },
-            31: { status: "nodata", text: "" }
-        }
-    }
-];
-// --- END: Dummy Data ---
-*/
+
+
+
 
 async function monthly_fetchAndDisplayAllSummaryData(year, month) {
     const allSummaryTbody = document.getElementById('all-summary-tbody');
@@ -305,23 +258,7 @@ async function detail_fetchAndDisplaySummaryData(userName) {
     }
 }
 
-/*
-// --- START: Dummy Data (ข้อมูลจำลอง) - คอมเมนต์เก็บไว้ ---
-const detail_dummyData = {
-    "สมศรี มีสุข": {
-        totalClips: 145,
-        totalMissing: 0,
-        totalHolidays: 3,
-        totalViews: "12,500",
-        dailyData: {
-             1: { status: "complete", clips: 5 }, 2: { status: "complete", clips: 5 }, 3: { status: "holiday", text: "หยุด" },
-            // ... (ข้อมูลจำลองอื่นๆ) ...
-        }
-    },
-    // ... (ข้อมูลจำลองคนอื่นๆ) ...
-};
-// --- END: Dummy Data ---
-*/
+
 
 function detail_generateDailyCalendarTable(dailyData) {
     const calendarTbody = document.getElementById('calendar-tbody');
@@ -425,8 +362,128 @@ function loadSummaryView(viewName, userName = null) {
     initMonthlySummaryView();
   } else if (viewName === 'summary-detail') {
     initDetailSummaryView(userName);
+  } else if (viewName === 'leaves') { // เพิ่มเงื่อนไขสำหรับแถบ Leaves
+    initLeavesView();
   }
 }
 
-// Expose the dispatcher function globally if needed by rcp_app.js
-window.loadSummaryView = loadSummaryView;
+// summary_views.js
+
+// เก็บ instance ของ Flatpickr ไว้ใช้
+let leavesFlatpickrInstance;
+let isLeavesViewInitialized = false;
+
+function initLeavesView() {
+  // ถ้าเคย initialize แล้ว ให้แค่ fetch ข้อมูลสำหรับวันปัจจุบัน/วันที่เลือก
+  if (isLeavesViewInitialized) {
+    const sel = leavesFlatpickrInstance.selectedDates[0] || new Date();
+    fetchAndPopulateLeaves(sel);
+    return;
+  }
+
+  // 1) หา element ต่างๆ
+const calendarBtn = document.getElementById('leaves-calendar-button');
+const pickerInput  = document.getElementById('leaves-date-picker');
+const displayEl    = document.getElementById('current-date-display');
+const today        = new Date();
+  // 2) แสดงวันที่ปัจจุบันบน UI
+  if (displayEl) {
+    displayEl.textContent = `ส่งคลิปประจำวันที่ ${today.getDate()}/${today.getMonth()+1}/${today.getFullYear()}`;
+  }
+
+  // 3) ตรวจว่ามี flatpickr และ element ครบ
+  if (!window.flatpickr || !pickerInput || !calendarBtn) {
+    console.warn('Leaves: flatpickr หรือ HTML hooks ไม่ครบ');
+    return;
+  }
+
+  // 4) ติดตั้ง Flatpickr ครั้งแรก
+leavesFlatpickrInstance = flatpickr(
+  document.getElementById('leaves-date-picker'),
+  {
+    locale: 'th',
+    defaultDate: new Date(),
+    dateFormat: 'd-m-Y',
+    positionElement: document.getElementById('leaves-calendar-button'),
+    onChange: ([sel]) => {
+      if (!sel) return;
+      document.getElementById('current-date-display').textContent =
+        `ส่งคลิปประจำวันที่ ${sel.getDate()}/${sel.getMonth()+1}/${sel.getFullYear()}`;
+      fetchAndPopulateLeaves(sel);
+    }
+  }
+);
+
+// 5) ผูกปุ่ม “ปฏิทิน” ให้เปิด Flatpickr
+document
+  .getElementById('leaves-calendar-button')
+  .addEventListener('click', () => leavesFlatpickrInstance.open());
+
+  // 6) โหลดข้อมูลครั้งแรกสำหรับวันนี้
+  fetchAndPopulateLeaves(today);
+
+  isLeavesViewInitialized = true;
+}
+
+// ฟังก์ชันดึงและแสดงข้อมูลวันนั้นๆ
+async function fetchAndPopulateLeaves(date) {
+  const tbody = document.getElementById('leaves-table-body');
+  tbody.innerHTML = `<tr><td colspan="12" class="text-center p-4">กำลังดึงข้อมูล…</td></tr>`;
+
+  // 1) ดึงรายวัน (ที่มีอยู่แล้ว)
+  const year  = date.getFullYear();
+  const month = date.getMonth() + 1;
+  const day   = date.getDate();
+  const dailyRes = await window.pywebview.api.fetch_leaves_list(year, month, day);
+  if (dailyRes.status !== 'ok') {
+    tbody.innerHTML = `<tr><td colspan="12" class="text-center p-4">ไม่พบข้อมูล: ${dailyRes.message}</td></tr>`;
+    return;
+  }
+  const daily = dailyRes.payload; // [{ name, projectName, …, statusToday }, …]
+
+  // 2) ดึงข้อมูลภาพรวมเดือน (TotalSent, สถานะ) จาก Monthly_Summary
+  const monthlyRes = await window.pywebview.api.get_monthly_summary_rows(year, month);
+  const monthly = monthlyRes.status === 'ok'
+    ? monthlyRes.payload
+    : [];
+  // สร้าง map: projectName → { TotalSent, สถานะ }
+  const monthMap = {};
+  for (const row of monthly) {
+    monthMap[row.SheetName] = {
+      totalSent: row.TotalSent,
+      status:    row.สถานะ,       // ถ้าคอลัมน์ชื่อ K เป็น header “สถานะ”
+    };
+  }
+
+  // 3) สร้าง table rows ใหม่
+  tbody.innerHTML = daily.map((item, i) => {
+    const m = monthMap[item.projectName] || {};
+    return `
+      <tr>
+        <td>${i+1}</td>
+        <td>${item.name}</td>
+        <td>${item.projectName}</td>
+        <td>${m.totalSent ?? 0} คลิป</td>
+        <td class="${m.status==='ส่งครบ' ? 'text-green-600' : 'text-red-600'}">
+          ${m.status || 'ยังไม่ส่ง'}
+        </td>
+        <td>${item.platform}</td>
+        <td>${item.dailyTarget.toLocaleString()} คลิป</td>
+        <td>${item.totalSentThisMonth.toLocaleString()} คลิป</td>
+        <td>${item.leaveDays || 'N/A'}</td>
+        <td>${item.missingDays || 0} วัน</td>
+        <td>${item.missingClips || 0} คลิป</td>
+        <td>
+          <button class="btn-view-detail" data-name="${item.name}">ดูภาพรวม</button>
+        </td>
+      </tr>`;
+  }).join('');
+}
+
+
+// เมื่อตัว PyWebView พร้อม inject api ให้เรียก initLeavesView
+window.addEventListener('pywebviewready', () => {
+  initLeavesView();
+});
+
+

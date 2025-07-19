@@ -199,6 +199,7 @@ async function handleLoginClick(e) {
       hideLoginModal();
       initApp(res.payload);
       document.getElementById("app-container").style.display = "block";
+      window.switchView('home'); // แสดงหน้า Home ทันที
     } else {
       // Use SweetAlert2 for login failure
       showLoginErrorPopup(res.message || 'เกิดข้อผิดพลาดขณะเข้าสู่ระบบ');
@@ -216,46 +217,45 @@ async function handleLoginClick(e) {
 }
 
 // ====== AUTO LOGIN (Remember Me) ======
-// ให้เหลือ event listener pywebviewready แค่ตัวเดียว
 window.addEventListener('pywebviewready', async () => {
   // --- Step 1: Pre-load essential data (Staffs) ---
-  // This is critical for initApp to correctly determine the initial project.
-  // We wrap this in its own try-catch so a failure here doesn't block auto-login.
   try {
-    console.log('[JS DEBUG] pywebviewready: Pre-loading staffs data...');
-    const staffsRes = await window.pywebview.api.fetch_staffs_data('https://docs.google.com/spreadsheets/d/17lOtuHum9VHdukfHr7143uCGydVZSaJNi2RhzGfh81g/edit?gid=1356715801#gid=1356715801');
-    if (staffsRes.status === 'ok') {
-      window.allStaffsData = staffsRes.payload || [];
-      console.log('[JS DEBUG] pywebviewready: Successfully pre-loaded staffs data. Count:', window.allStaffsData.length);
-    } else {
-      console.warn('[JS WARNING] pywebviewready: Could not pre-load staffs data:', staffsRes.message);
-      window.allStaffsData = []; // Ensure it's an empty array on failure
-    }
+    console.log('[JS DEBUG] Pre-loading staffs data...');
+    // เรียกโดยไม่ต้องส่งพารามิเตอร์ใดๆ
+    const staffsRes = await window.pywebview.api.fetch_staffs_data();
+    window.allStaffsData = staffsRes.status === 'ok' ? staffsRes.payload : [];
   } catch (err) {
-    console.error('[JS ERROR] Failed to pre-load staffs data. This might affect initial project selection, but auto-login will proceed.', err);
-    window.allStaffsData = []; // Critical: ensure it's an empty array on any error
+    console.error('[JS ERROR] Pre-load staffs failed:', err);
+    window.allStaffsData = [];
   }
 
-  // --- Step 2: Attempt auto-login ---
-  // This part now runs regardless of whether the staff data load succeeded.
+  // --- Step 2: Call auto_login() to decide view ---
+  let res;
   try {
-    console.log('[JS DEBUG] pywebviewready: Checking for auto-login...');
-    const res = await window.pywebview.api.auto_login();
-    if (res.status === 'ok') {
-      console.log('[JS DEBUG] auto_login success. Initializing app.');
-      hideLoginModal();
-      initApp(res.payload);
-      document.getElementById("app-container").style.display = "block";
-      return; // Exit successfully
-    }
-    console.log('[JS DEBUG] auto_login failed or no remembered user.');
+    console.log('[JS DEBUG] Calling auto_login()...');
+    res = await window.pywebview.api.auto_login();
   } catch (e) {
-    console.error('[JS ERROR] Error during auto_login API call:', e);
+    console.error('[JS ERROR] auto_login threw:', e);
+    res = { status: 'error' };
   }
+
+  // --- Show page once auto-login result is known ---
+  document.body.style.visibility = 'visible';
+
+  if (res.status === 'ok') {
+    console.log('[JS DEBUG] auto_login success → show Dashboard');
+    hideLoginModal();
+    initApp(res.payload);
+    document.getElementById("app-container").style.display = "block";
+    window.switchView('home'); // แสดงหน้า Home ทันที
+    return;  // จบเลย ไม่ต้องเห็น Login
+  }
+
+  console.log('[JS DEBUG] auto_login failed → show Login');
 
   // --- Step 3: Fallback to showing the login modal ---
   showLoginModal();
-  requestAnimationFrame(() => setupLoginButton());
+  requestAnimationFrame(setupLoginButton);
 });
 
 window.handleLoginClick = handleLoginClick; // Make it globally accessible
@@ -318,145 +318,147 @@ function initApp(user) {
       window.loadProfileDataOnLogin();
   }
 
-  // Wait for flatpickr, then load the correct project for admin or first allowed project for others
-  waitForFlatpickr().then(() => {
-    let initialProjectId = null;
-    let initialProjectSheetName = '';
+  let initialProjectId = null;
+  let initialProjectSheetName = '';
 
-    if (user.AllowedProjects?.length > 0) {
-      // --- หาว่า user มีโปรเจกต์ที่ตัวเองเป็นเจ้าของหรือไม่ (owner/email/sheetName) ---
-      const userEmail = (user["E-Mail"] || "").trim().toLowerCase();
-      let foundOwnProject = false;
-      for (const pid of user.AllowedProjects) {
-        const proj = user.ProjectMap[pid];
-        // 1) กรณี ProjectMap[pid] เป็น object และมี owner
-        if (proj && typeof proj === 'object' && proj.owner) {
-          const ownerEmail = String(proj.owner).trim().toLowerCase();
-          if (ownerEmail === userEmail) {
-            initialProjectId = pid;
-            initialProjectSheetName = proj.sheetName || proj.name || pid;
-            foundOwnProject = true;
-            break;
-          }
-        }
-        // 2) กรณี ProjectMap[pid] เป็น string (sheet name) และชื่อ sheet ตรงกับ Project Name ในชีต (case-insensitive)
-        if (proj && typeof proj === 'string') {
-          // ดึง Project Name จาก row ในชีตที่ email ตรงกับ user
-          let projectNameFromSheet = null;
-          if (Array.isArray(window.allStaffsData)) {
-            const staffRow = window.allStaffsData.find(row => {
-              const emailCell = (row['E-Mail'] || row['Email'] || '').trim().toLowerCase();
-              return emailCell === userEmail;
-            });
-            if (staffRow && staffRow['Project Name']) {
-              projectNameFromSheet = String(staffRow['Project Name']).trim();
-            }
-          }
-          // เปรียบเทียบแบบ case-insensitive
-          if (projectNameFromSheet && projectNameFromSheet.toLowerCase() === proj.trim().toLowerCase()) {
-            initialProjectId = pid;
-            initialProjectSheetName = proj;
-            foundOwnProject = true;
-            break;
-          }
+  if (user.AllowedProjects?.length > 0) {
+    // --- หาว่า user มีโปรเจกต์ที่ตัวเองเป็นเจ้าของหรือไม่ (owner/email/sheetName) ---
+    const userEmail = (user["E-Mail"] || "").trim().toLowerCase();
+    let foundOwnProject = false;
+    for (const pid of user.AllowedProjects) {
+      const proj = user.ProjectMap[pid];
+      // 1) กรณี ProjectMap[pid] เป็น object และมี owner
+      if (proj && typeof proj === 'object' && proj.owner) {
+        const ownerEmail = String(proj.owner).trim().toLowerCase();
+        if (ownerEmail === userEmail) {
+          initialProjectId = pid;
+          initialProjectSheetName = proj.sheetName || proj.name || pid;
+          foundOwnProject = true;
+          break;
         }
       }
-      // Fallback: ถ้าไม่เจอโปรเจกต์ตัวเอง ให้ใช้ project แรก
-      if (!foundOwnProject) {
-        initialProjectId = user.AllowedProjects[0];
-        const proj = user.ProjectMap[initialProjectId];
-        initialProjectSheetName = (proj && typeof proj === 'object') ? (proj.sheetName || proj.name || initialProjectId) : (proj || initialProjectId);
+      // 2) กรณี ProjectMap[pid] เป็น string (sheet name) และชื่อ sheet ตรงกับ Project Name ในชีต (case-insensitive)
+      if (proj && typeof proj === 'string') {
+        // ดึง Project Name จาก row ในชีตที่ email ตรงกับ user
+        let projectNameFromSheet = null;
+        if (Array.isArray(window.allStaffsData)) {
+          const staffRow = window.allStaffsData.find(row => {
+            const emailCell = (row['E-Mail'] || row['Email'] || '').trim().toLowerCase();
+            return emailCell === userEmail;
+          });
+          if (staffRow && staffRow['Project Name']) {
+            projectNameFromSheet = String(staffRow['Project Name']).trim();
+          }
+        }
+        // เปรียบเทียบแบบ case-insensitive
+        if (projectNameFromSheet && projectNameFromSheet.toLowerCase() === proj.trim().toLowerCase()) {
+          initialProjectId = pid;
+          initialProjectSheetName = proj;
+          foundOwnProject = true;
+          break;
+        }
       }
+    }
+    // Fallback: ถ้าไม่เจอโปรเจกต์ตัวเอง ให้ใช้ project แรก
+    if (!foundOwnProject) {
+      initialProjectId = user.AllowedProjects[0];
+      const proj = user.ProjectMap[initialProjectId];
+      initialProjectSheetName = (proj && typeof proj === 'object') ? (proj.sheetName || proj.name || initialProjectId) : (proj || initialProjectId);
+    }
 
-      window.currentProjectId = initialProjectId;
-      window.currentProjectSheetName = initialProjectSheetName;
-      console.log(`[JS DEBUG] initApp: Initial project - ID: ${window.currentProjectId}, Sheet Name: ${window.currentProjectSheetName}`);
+    window.currentProjectId = initialProjectId;
+    window.currentProjectSheetName = initialProjectSheetName;
+    console.log(`[JS DEBUG] initApp: Initial project - ID: ${window.currentProjectId}, Sheet Name: ${window.currentProjectSheetName}`);
 
-      // ————— Preload ข้อมูล Staffs ล่วงหน้า (cache) —————
-        const staffSheetUrl = 'https://docs.google.com/spreadsheets/d/17lOtuHum9VHdukfHr7143uCGydVZSaJNi2RhzGfh81g/edit?gid=1356715801#gid=1356715801';
-        window.pywebview.api.fetch_staffs_data(staffSheetUrl)
-            .then(res => {
-            window.allStaffsData = Array.isArray(res.payload) ? res.payload : [];
-            console.log('[JS DEBUG] Preloaded staffs data:', window.allStaffsData.length);
-            })
-            .catch(err => console.error('[JS ERROR] Preload staffs failed:', err));
+    // ————— Preload ข้อมูล Staffs ล่วงหน้า (cache) —————
+    const staffSheetUrl = 'https://docs.google.com/spreadsheets/d/17lOtuHum9VHdukfHr7143uCGydVZSaJNi2RhzGfh81g/edit?gid=1356715801#gid=1356715801';
+    window.pywebview.api.fetch_staffs_data(staffSheetUrl)
+        .then(res => {
+        window.allStaffsData = Array.isArray(res.payload) ? res.payload : [];
+        console.log('[JS DEBUG] Preloaded staffs data:', window.allStaffsData.length);
+        })
+        .catch(err => console.error('[JS ERROR] Preload staffs failed:', err));
     // ————————————————————————————————————————
 
-      // โหลดข้อมูลสำหรับ project ที่เลือก
-        loadProject(window.currentProjectId)
-            .then(() => {
-            // หลังจาก fetch โปรเจกต์เสร็จ สลับ view ไปหน้า Home
-            window.switchView('home');
+    // โหลดข้อมูลสำหรับ project ที่เลือก ทันที ไม่ต้องรอ Flatpickr
+    console.log("[JS DEBUG] initApp: Calling loadProject immediately.");
+    loadProject(window.currentProjectId)
+        .then(() => {
+        console.log("[JS DEBUG] initApp: loadProject completed.");
 
-            // --- NEW: Pre-load data for other tabs if Admin --- 
-            if (currentUser.Role?.toLowerCase() === 'admin') {
-                console.log('[JS DEBUG] Admin user logged in. Pre-loading data for other tabs...');
-                const adminPreloadTasks = [];
+        // --- NEW: Pre-load data for other tabs if Admin --- 
+        if (currentUser.Role?.toLowerCase() === 'admin') {
+            console.log('[JS DEBUG] Admin user logged in. Pre-loading data for other tabs...');
+            const adminPreloadTasks = [];
 
-                // Pre-load Staffs data
-                if (typeof populateStaffsTable === 'function') {
-                    adminPreloadTasks.push(window.pywebview.api.fetch_staffs_data('https://docs.google.com/sheets/d/17lOtuHum9VHdukfHr7143uCGydVZSaJNi2RhzGfh81g/edit?gid=1356715801#gid=1356715801')
-                        .then(res => {
-                            if (res.status === 'ok') {
-                                window.allStaffsData = Array.isArray(res.payload) ? res.payload : [];
-                                populateStaffsTable(window.allStaffsData); // Render the table with pre-loaded data
-                                console.log('[JS DEBUG] Staffs data pre-loaded and rendered.');
-                            } else {
-                                console.error('Failed to pre-load staffs data:', res.message);
-                            }
-                        })
-                        .catch(err => console.error('Error pre-loading staffs data:', err))
-                    );
-                }
-
-                // Pre-load Leaves data
-                if (typeof fetchAndPopulateLeaves === 'function') {
-                    adminPreloadTasks.push(fetchAndPopulateLeaves(new Date()) // fetchAndPopulateLeaves already fetches and renders
-                        .then(() => console.log('[JS DEBUG] Leaves data pre-loaded and rendered.'))
-                        .catch(err => console.error('Error pre-loading leaves data:', err))
-                    );
-                }
-
-                // Pre-load Stats data (for the logged-in admin's email)
-                if (typeof fetchAndRenderDashboard === 'function') {
-                    const adminEmail = currentUser['E-Mail'];
-                    const todayDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-                    if (adminEmail) {
-                        adminPreloadTasks.push(fetchAndRenderDashboard(adminEmail, todayDate) // fetchAndRenderDashboard already fetches and renders
-                            .then(() => console.log('[JS DEBUG] Stats data pre-loaded and rendered.'))
-                            .catch(err => console.error('Error pre-loading stats data:', err))
-                        );
-                    }
-                }
-
-                // Run all admin pre-load tasks in parallel
-                Promise.allSettled(adminPreloadTasks)
-                    .then(results => {
-                        const failed = results.filter(r => r.status === 'rejected');
-                        if (failed.length > 0) {
-                            console.warn('[JS DEBUG] Some admin pre-load tasks failed:', failed);
+            // Pre-load Staffs data
+            if (typeof populateStaffsTable === 'function') {
+                console.log("[JS DEBUG] Admin Pre-load: Fetching Staffs data...");
+                adminPreloadTasks.push(window.pywebview.api.fetch_staffs_data('https://docs.google.com/sheets/d/17lOtuHum9VHdukfHr7143uCGydVZSaJNi2RhzGfh81g/edit?gid=1356715801#gid=1356715801')
+                    .then(res => {
+                        if (res.status === 'ok') {
+                            window.allStaffsData = Array.isArray(res.payload) ? res.payload : [];
+                            populateStaffsTable(window.allStaffsData); // Render the table with pre-loaded data
+                            console.log('[JS DEBUG] Staffs data pre-loaded and rendered.');
                         } else {
-                            console.log('[JS DEBUG] All admin pre-load tasks completed.');
+                            console.error('Failed to pre-load staffs data:', res.message);
                         }
-                    });
+                    })
+                    .catch(err => console.error('Error pre-loading staffs data:', err))
+                );
             }
-            });
-    } else {
-      // No allowed projects, show a message and hide work view
-      const workView = document.getElementById('view-work');
-      if (workView) workView.classList.add('hidden-view');
-      Swal.fire('No Projects', 'คุณไม่มีสิทธิ์เข้าถึงโปรเจกต์ใด ๆ', 'info');
-    }
-  }).catch(err => {
-      console.error("[JS ERROR] initApp: Flatpickr or initial project load failed:", err);
-      Swal.fire('Error', 'เกิดข้อผิดพลาดในการเริ่มต้นโปรแกรม: ' + err, 'error');
-  });
+
+            // Pre-load Leaves data
+            if (typeof fetchAndPopulateLeaves === 'function') {
+                console.log("[JS DEBUG] Admin Pre-load: Fetching Leaves data...");
+                adminPreloadTasks.push(fetchAndPopulateLeaves(new Date()) // fetchAndPopulateLeaves already fetches and renders
+                    .then(() => console.log('[JS DEBUG] Leaves data pre-loaded and rendered.'))
+                    .catch(err => console.error('Error pre-loading leaves data:', err))
+                );
+            }
+
+            // Pre-load Stats data (for the logged-in admin's email)
+            if (typeof fetchAndRenderDashboard === 'function') {
+                const adminEmail = currentUser['E-Mail'];
+                const todayDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+                if (adminEmail) {
+                    console.log("[JS DEBUG] Admin Pre-load: Fetching Stats data...");
+                    adminPreloadTasks.push(fetchAndRenderDashboard(adminEmail, todayDate) // fetchAndRenderDashboard already fetches and renders
+                        .then(() => console.log('[JS DEBUG] Stats data pre-loaded and rendered.'))
+                        .catch(err => console.error('Error pre-loading stats data:', err))
+                    );
+                }
+            }
+
+            // Run all admin pre-load tasks in parallel
+            Promise.allSettled(adminPreloadTasks)
+                .then(results => {
+                    const failed = results.filter(r => r.status === 'rejected');
+                    if (failed.length > 0) {
+                        console.warn('[JS DEBUG] Some admin pre-load tasks failed:', failed);
+                    } else {
+                        console.log('[JS DEBUG] All admin pre-load tasks completed.');
+                    }
+                });
+        }
+        })
+        .catch(err => {
+            console.error("[JS ERROR] initApp: Initial project load failed:", err);
+            Swal.fire('Error', 'เกิดข้อผิดพลาดในการโหลดโปรเจกต์เริ่มต้น: ' + err, 'error');
+        });
+  } else {
+    // No allowed projects, show a message and hide work view
+    const workView = document.getElementById('view-work');
+    if (workView) workView.classList.add('hidden-view');
+    Swal.fire('No Projects', 'คุณไม่มีสิทธิ์เข้าถึงโปรเจกต์ใด ๆ', 'info');
+  }
 }
 
 // ✅ โหลดข้อมูลโปรเจกต์
 
 function loadProject(projectId) {
   console.log('[JS DEBUG] loadProject called with projectId:', projectId);
+  console.log('[JS DEBUG] loadProject: Starting data fetch...');
   console.log('[JS DEBUG] currentUser.AllowedProjects:', currentUser?.AllowedProjects);
   console.log('[JS DEBUG] projectMap:', projectMap);
 
@@ -483,12 +485,22 @@ function loadProject(projectId) {
   // === อัพเดตชื่อโปรเจกต์บน UI ===
   _updateProjectHeaderUI();
 
+  // === แสดงสถานะกำลังโหลดในตารางงานทันที ===
+  const tbody = document.getElementById('work-rows');
+  if (tbody) {
+      tbody.innerHTML = `<tr><td colspan="8" class="text-center text-gray-500 py-4">กำลังโหลดข้อมูล...</td></tr>`;
+  }
+
   // === เรียก Python API ===
   return window.pywebview.api.fetch_employee_data(projectId)
     .then(res => {
       if (res.status !== 'ok') {
         Swal.fire('Error', res.message, 'error');
         console.error('[JS ERROR] fetch_employee_data failed:', res.message);
+        // Revert loading state or show error in table
+        if (tbody) {
+            tbody.innerHTML = `<tr><td colspan="8" class="text-center text-red-500 py-4">เกิดข้อผิดพลาดในการโหลดข้อมูล: ${res.message}</td></tr>`;
+        }
         return Promise.reject(new Error(res.message));
       }
 
@@ -588,6 +600,7 @@ function populateProfileView(user) {
 
 // ===== ฟังก์ชันแสดงข้อมูลตาราง "ลงงาน" (Work Table) =====
 function populateWorkTable(dateObject, sheetNameForTable) {
+    console.log("[JS DEBUG] populateWorkTable: Starting population of work table.");
     console.log("[JS DEBUG] populateWorkTable called with date:", dateObject, "and received sheetNameForTable:", sheetNameForTable); // ✅ NEW LOG
     if (!(dateObject instanceof Date) || isNaN(dateObject.getTime())) { // Check for valid Date object
         console.warn("[JS WARNING] populateWorkTable received invalid dateObject. Using current date.");
@@ -777,6 +790,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (adminSwitch) {
         adminSwitch.addEventListener('change', function() {
+          // ตรวจสอบ Role ก่อนอนุญาตให้สลับ
+          if (currentUser && currentUser.Role === 'User') {
+            Swal.fire('Access Denied', 'คุณไม่มีสิทธิ์เข้าถึงโหมดผู้ดูแลระบบ', 'error');
+            this.checked = !this.checked; // คืนค่าปุ่มกลับไปสถานะเดิม
+            return; // หยุดการทำงานต่อ
+          }
+
           if (this.checked) {
             // — เมื่อเปิด Admin Mode —
             sidebarEl.classList.add('admin-mode');      // เพิ่มคลาสเปลี่ยนสีใน CSS
@@ -820,12 +840,11 @@ document.body.addEventListener('click', (e) => {
     // Switch logic to call the correct data-fetching function for each view
 
     if (targetView === 'leaves') {
-        // สำหรับหน้า Leaves, ให้เรียกฟังก์ชันนี้โดยตรง
-        if (typeof populateLeavesTable === 'function') {
-            console.log("[JS DEBUG] Calling populateLeavesTable() for 'leaves' view.");
-            populateLeavesTable();
+        if (window.loadSummaryView) {
+            console.log("[JS DEBUG] Calling window.loadSummaryView('leaves') for 'leaves' view.");
+            window.loadSummaryView('leaves');
         } else {
-            console.warn("[JS WARNING] Function populateLeavesTable() is not defined.");
+            console.warn("[JS WARNING] window.loadSummaryView is not defined. Leaves view might not initialize correctly.");
         }
     } else if (targetView === 'monthly-summary' || targetView === 'summary-detail') {
         // สำหรับหน้า Summary อื่นๆ ที่จัดการโดย summary_views.js
@@ -858,41 +877,18 @@ document.body.addEventListener('click', (e) => {
 document.addEventListener('DOMContentLoaded', () => {
     // ... (existing code) ...
 
-    // --- Initialize Flatpickr for Leaves View (ONCE) ---
-    const leavesDatePicker = document.getElementById('leaves-date-picker');
-    if (leavesDatePicker) {
-        flatpickr(leavesDatePicker, {
-            dateFormat: "Y-m-d",
-            defaultDate: "today",
-            onChange: function(selectedDates, dateStr, instance) {
-                if (selectedDates.length > 0) {
-                    const selectedDate = selectedDates[0];
-                    const year = selectedDate.getFullYear();
-                    const month = selectedDate.getMonth() + 1;
-                    // Call the function to fetch and display data
-                    fetchAndPopulateLeaves(year, month);
-                }
-            },
-        });
-    }
+    
+    
 
     // ... (the rest of your DOMContentLoaded event listener) ...
 });
 
-async function populateLeavesTable() {
-    // This function is now just for the initial data load.
-    const initialDate = new Date();
-    fetchAndPopulateLeaves(initialDate.getFullYear(), initialDate.getMonth() + 1);
-}
+
+
 
 // Helper function to fetch and populate leaves data
-async function populateLeavesTable() {
-    // This function is now just for the initial data load.
-    fetchAndPopulateLeaves(new Date()); // Load today's data initially
-}
-
-// Helper function to fetch and populate leaves data
-async function fetchAndPopulateLeaves(dateObject) {
+window.fetchAndPopulateLeaves = async (dateObject) => {
+    console.log("[JS DEBUG] fetchAndPopulateLeaves called with dateObject:", dateObject);
     const tbody = document.getElementById('leaves-table-body');
     if (!tbody) {
         console.error("Leaves table body not found!");
@@ -910,7 +906,7 @@ async function fetchAndPopulateLeaves(dateObject) {
         dateDisplay.textContent = `ภาพรวมประจำวันที่ ${dateStr}`;
     }
     // --- สิ้นสุดการแก้ไข ---
-    
+
     tbody.innerHTML = `<tr><td colspan="12" class="text-center p-4">กำลังโหลดข้อมูล...</td></tr>`;
 
     try {
@@ -918,11 +914,15 @@ async function fetchAndPopulateLeaves(dateObject) {
         const year = dateObject.getFullYear();
         const month = dateObject.getMonth() + 1;
         const day = dateObject.getDate();
+        console.log(`[JS DEBUG] Calling fetch_leaves_list with year: ${year}, month: ${month}, day: ${day}`);
 
         const res = await window.pywebview.api.fetch_leaves_list(year, month, day);
+        console.log("[JS DEBUG] Response from fetch_leaves_list:", res);
+
         if (res.status === 'ok' && Array.isArray(res.payload)) {
             const data = res.payload;
-            
+            console.log("[JS DEBUG] Leaves data payload:", data);
+
             if (data.length === 0) {
                 tbody.innerHTML = `<tr><td colspan="12" class="text-center p-4">ไม่พบข้อมูล</td></tr>`;
                 return;
@@ -949,7 +949,7 @@ async function fetchAndPopulateLeaves(dateObject) {
                     </td>
                 </tr>
             `).join('');
-            
+
         } else {
             tbody.innerHTML = `<tr><td colspan="12" class="text-center p-4 text-red-500">Error: ${res.message || 'Could not load data.'}</td></tr>`;
         }
@@ -957,7 +957,7 @@ async function fetchAndPopulateLeaves(dateObject) {
         console.error("Error calling fetch_leaves_list:", err);
         tbody.innerHTML = `<tr><td colspan="12" class="text-center p-4 text-red-500">เกิดข้อผิดพลาดในการเชื่อมต่อ</td></tr>`;
     }
-}
+};
 
     // —————————————————————————————————————————————————————————————
     // 5) ปุ่ม “Exit Admin” → ปิด Toggle และสลับกลับ User
@@ -1388,6 +1388,15 @@ async function fetchAndPopulateLeaves(dateObject) {
             // Update top-right user info in view-home
             const topRightUserName = document.getElementById('top-right-user-name');
             const topRightAvatar = document.getElementById('top-right-avatar');
+            if (topRightAvatar) {
+                // <<< เพิ่มส่วนนี้เลย ทันทีถัดจาก src assignment >>>
+                const avatarSkeleton = document.getElementById('avatar-skeleton');
+                topRightAvatar.onload = () => {
+                    avatarSkeleton.style.display = 'none';
+                    topRightAvatar.hidden = false;
+                };
+                }
+                topRightAvatar.src = profile.avatar_url || 'https://i.pravatar.cc/50?img=1';
             if (topRightUserName) topRightUserName.textContent = name;
             if (topRightAvatar) topRightAvatar.src = profile.avatar_url || 'https://i.pravatar.cc/50?img=1';
 
@@ -1399,6 +1408,8 @@ async function fetchAndPopulateLeaves(dateObject) {
             if (staffsTopUserRole) staffsTopUserRole.textContent = role;
             if (staffsTopUserAvatar) staffsTopUserAvatar.src = profile.avatar_url || 'https://i.pravatar.cc/40?img=2';
         };
+
+       
 
         // --- 3. Function to fetch data from backend ---
         const loadProfileData = async () => {
@@ -1962,3 +1973,6 @@ async function fetchAndPopulateLeaves(dateObject) {
         }, 3000);
     }
 });
+
+
+
