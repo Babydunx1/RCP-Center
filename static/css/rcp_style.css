@@ -15,9 +15,6 @@ html, body, .rcp-dashboard-body {
   overflow-x: auto;
 }
 
-
-
-
 body.rcp-dashboard-body {
     font-family: 'Prompt', Arial, sans-serif;
     background: #eaf4fc;
@@ -448,9 +445,6 @@ body.rcp-dashboard-body {
 }
 
 /* Responsive layout: ให้ container/table ขยายเต็มขวา รองรับ sidebar fixed ซ้าย */
-
-
-
 
 
 

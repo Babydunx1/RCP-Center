@@ -22,10 +22,11 @@
     <link rel="stylesheet" href="static/css/Leaves_management_style.css">
     <title>Staffs Page - Final Design</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="stylesheet" href="style.css">
+    
     <!-- Flatpickr CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
@@ -81,6 +82,15 @@
                         <p class="text-gray-500 mt-1" id="date-display-home"></p>
                     </div>
                     <div class="flex items-center gap-4">
+                        <!-- ▶ ปุ่ม Reload -->
+                        <button id="btn-reload" class="relative p-2 hover:bg-gray-100 rounded" title="Reload Data">
+                            <!-- ไอคอนรีเฟรช -->
+                            <i id="reload-icon" class="fas fa-sync-alt text-gray-600 text-xl"></i>
+                            <!-- Spinner จาก FA -->
+                            <i id="reload-spinner" class="fas fa-spinner fa-spin text-gray-600 text-xl absolute inset-0 m-auto hidden"></i>
+                            </button>
+                        <!-- ▶ ปุ่ม Reload -->
+
                         <div id="time-display-home" class="text-2xl font-semibold text-gray-700 bg-white px-4 py-2 rounded-lg shadow-sm"></div>
                         <span id="top-right-user-name" class="text-lg font-semibold text-gray-800"></span>
                         <img src="https://i.pravatar.cc/50?img=1" alt="Avatar" id="top-right-avatar" class="w-12 h-12 rounded-full">
@@ -967,21 +977,121 @@
 
                     <!-- =================== View: Stats =================== -->
                     <div id="view-stats" class="view hidden-view">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Statistics & Analytics</h2>
-                    <div class="bg-white p-6 rounded-xl shadow-md">
-                        <p class="text-gray-700 mb-4">หน้านี้จะแสดงสถิติและกราฟวิเคราะห์ประสิทธิภาพการทำงานของพนักงานและโปรเจกต์</p>
-                        <ul class="list-disc list-inside text-gray-600 space-y-2">
-                            <li>กราฟยอดวิวรวมของแต่ละแพลตฟอร์ม</li>
-                            <li>สถิติการส่งงานครบ/ขาดส่งของพนักงานแต่ละคน</li>
-                            <li>แนวโน้มประสิทธิภาพการทำงานรายเดือน/รายไตรมาส</li>
-                            <li>ข้อมูลเชิงลึกเพื่อการตัดสินใจ</li>
-                        </ul>
-                        <div class="mt-6 text-center">
-                            <i class="fa-solid fa-chart-pie text-5xl text-blue-500 mb-4"></i>
-                            <p class="text-lg font-semibold text-gray-800">ส่วนแสดงสถิติกำลังจะมาเร็วๆ นี้!</p>
+                    <link rel="stylesheet" href="static/css/stats_view.css">
+                    <div class="epd-dashboard-container">
+                        <aside class="epd-employee-sidebar">
+                        <div class="epd-sidebar-header">
+                            <h3>พนักงานทั้งหมด (25)</h3>
+                            <div class="epd-search-wrapper">
+                            <i class="fas fa-search"></i>
+                            <input type="text" placeholder="ค้นหาชื่อพนักงาน...">
+                            </div>
                         </div>
+                        <ul class="epd-employee-list">
+                            <li class="epd-employee-card active" data-email="tonton.002321@gmail.com">
+                            <img src="https://i.pravatar.cc/40?u=emp1" alt="Avatar">
+                            <div class="epd-employee-info">
+                                <span class="epd-employee-name">นายสมชาย ใจดี</span>
+                                <span class="epd-employee-project">Project Q</span>
+                            </div>
+                            <span class="epd-status-dot online"></span>
+                            </li>
+                            <li class="epd-employee-card" data-email="nang.somsri@gmail.com">
+                            <img src="https://i.pravatar.cc/40?u=emp2" alt="Avatar">
+                            <div class="epd-employee-info">
+                                <span class="epd-employee-name">นางสาวสมศรี มีสุข</span>
+                                <span class="epd-employee-project">Project T.</span>
+                            </div>
+                            <span class="epd-status-dot online"></span>
+                            </li>
+                            <li class="epd-employee-card" data-email="mana.bakban@gmail.com">
+                            <img src="https://i.pravatar.cc/40?u=emp3" alt="Avatar">
+                            <div class="epd-employee-info">
+                                <span class="epd-employee-name">นายมานะ บากบั่น</span>
+                                <span class="epd-employee-project">Project H.</span>
+                            </div>
+                            <span class="epd-status-dot offline"></span>
+                            </li>
+                        </ul>
+                        </aside>
+                        <main class="epd-main-content">
+                        <header class="epd-main-header">
+                            <h1 id="epd-employee-main-name">ภาพรวมของ: นายสมชาย ใจดี</h1>
+                            <div class="epd-date-picker-wrapper">
+                            <input type="text" id="epd-date-picker" placeholder="เลือกวันที่...">
+                            </div>
+                        </header>
+                        <nav class="epd-tabs">
+                            <button class="epd-tab-button active" data-tab="overview">
+                            <i class="fas fa-chart-pie"></i> ภาพรวม
+                            </button>
+                            <button class="epd-tab-button" data-tab="pages">
+                            <i class="fas fa-file-alt"></i> จัดการเพจ
+                            </button>
+                            <button class="epd-tab-button" data-tab="leaves">
+                            <i class="fas fa-calendar-alt"></i> จัดการการลางาน
+                            </button>
+                        </nav>
+                        <div class="epd-tab-content-wrapper">
+                            <div id="tab-overview" class="epd-tab-content active">
+                            <div class="epd-kpi-grid">
+                                <div class="epd-kpi-card">
+                                <i class="fas fa-file-invoice-dollar icon-bg"></i>
+                                <span class="epd-kpi-title">จำนวนเพจที่ดูแล</span>
+                                <span class="epd-kpi-value">20</span>
+                                </div>
+                                <div class="epd-kpi-card">
+                                <i class="fas fa-check-circle icon-bg"></i>
+                                <span class="epd-kpi-title">สถานะส่งงานวันนี้</span>
+                                <span class="epd-kpi-value text-green">ส่งครบ</span>
+                                </div>
+                                <div class="epd-kpi-card">
+                                <i class="fas fa-eye icon-bg"></i>
+                                <span class="epd-kpi-title">ยอดวิวรวมวันนี้</span>
+                                <span class="epd-kpi-value">1,250,000</span>
+                                </div>
+                                <div class="epd-kpi-card">
+                                <i class="fas fa-calendar-check icon-bg"></i>
+                                <span class="epd-kpi-title">สถานะการลาวันนี้</span>
+                                <span class="epd-kpi-value">ปกติ</span>
+                                </div>
+                            </div>
+                            <div class="epd-chart-container">
+                                <h2>ประสิทธิภาพย้อนหลัง 7 วัน (จำนวนคลิป)</h2>
+                                <img src="https://placehold.co/600x250/E9EEF6/4A5568?text=Chart+Placeholder" alt="Chart Placeholder" style="width: 100%; border-radius: 8px;">
+                            </div>
+                            </div>
+                            <div id="tab-pages" class="epd-tab-content">
+                            <div class="epd-page-grid"></div>
+                            </div>
+                            <div id="tab-leaves" class="epd-tab-content">
+                            <div class="epd-leave-request-card">
+                                <div class="epd-leave-header">
+                                <i class="fas fa-user-clock"></i>
+                                <h3>คำขอลางานวันนี้</h3>
+                                </div>
+                                <div class="epd-leave-body">
+                                <p><strong>ประเภท:</strong> ลาป่วย</p>
+                                <p><strong>วันที่:</strong> 17 ก.ค. 2568</p>
+                                <p><strong>เหตุผล:</strong> ไม่สบาย</p>
+                                </div>
+                                <div class="epd-leave-actions">
+                                <button class="epd-btn reject">ปฏิเสธ</button>
+                                <button class="epd-btn approve">อนุมัติ</button>
+                                </div>
+                            </div>
+                            <div class="epd-leave-history">
+                                <h4>ประวัติการลางาน</h4>
+                                <ul>
+                                <li>16 ก.ค. 2568 - ลากิจ</li>
+                                <li>10 ก.ค. 2568 - ลาป่วย</li>
+                                </ul>
+                            </div>
+                            </div>
+                        </div>
+                        </main>
                     </div>
-                    </div>
+                </div>
 
                     <!-- =================== View: Notifications =================== -->
                     <div id="view-notifications" class="hidden-view px-8 py-6">
@@ -1101,7 +1211,9 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <!-- Flatpickr JS -->
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/th.js"></script> 
     <!-- YOUR APP JS -->
+     <script src="static/js/stats_view.js"></script> 
     <!-- Profile Picture Selection Modal -->
     <div id="profile-pic-modal" class="modal">
         <div class="modal-content">
@@ -1117,6 +1229,130 @@
 
     <script src="static/js/rcp_app.js"></script> <!-- เพิ่มตรงนี้ -->
     <script src="static/js/summary_views.js"></script>
+
     
-</body>
+
+    <!-- ▶ เพิ่มบล็อกนี้ก่อน </body> -->
+    <script type="module">
+        import { initReloadButton } from './static/js/reload_data.js';
+        // 🔴 REMOVED: import { fetchAndRenderDashboard } from './static/js/stats_view.js';
+
+        // ✅✅✅ Wait for pywebview to be ready before doing anything ✅✅✅
+        window.addEventListener('pywebviewready', () => {
+            console.log('Pywebview is ready. Initializing app logic.');
+
+            // Function to call the Python API
+            async function clearCaches() {
+                console.log("Calling python.clear_caches() via pywebview.api");
+                try {
+                    const res = await window.pywebview.api.clear_caches();
+                    console.log("Python response:", res);
+                    if (!res || res.status !== 'ok') {
+                        throw new Error(res?.message || 'เกิดข้อผิดพลาดในการล้างแคช');
+                    }
+                } catch (e) {
+                    console.error("Error calling clear_caches:", e);
+                    throw e; // Re-throw to be caught by the button handler
+                }
+            }
+
+            // ✅ Function to run after a successful refresh, now with role-based logic
+            const onComplete = async () => {
+                Swal.fire({
+                    title: 'กำลังรีเฟรชข้อมูลเบื้องหลัง',
+                    text: 'กรุณารอสักครู่ ระบบกำลังดึงข้อมูลล่าสุด',
+                    allowOutsideClick: false,
+                    didOpen: () => { Swal.showLoading(); }
+                });
+
+                try {
+                    const userRole = window.currentUser?.Role?.toLowerCase();
+                    if (!userRole) {
+                        throw new Error('ไม่สามารถระบุ Role ของผู้ใช้ได้');
+                    }
+
+                    console.log(`Starting background refresh for role: ${userRole}`);
+
+                    const refreshTasks = [];
+
+                    // Define tasks based on role
+                    // Refresh Work data (relevant for both Admin and User)
+                    // This requires fetching new data and then re-rendering the table
+                    if (typeof populateWorkTable === 'function' && window.flatpickrInstance && window.currentProjectId && window.currentProjectSheetName) {
+                        const dateToUse = window.flatpickrInstance.selectedDates?.[0] || new Date();
+                        refreshTasks.push(window.pywebview.api.fetch_employee_data(window.currentProjectId) // Re-fetch project data
+                            .then(res => {
+                                if (res.status === 'ok') {
+                                    window.allReelsData = res.payload.reels || [];
+                                    populateWorkTable(dateToUse, window.currentProjectSheetName);
+                                } else {
+                                    throw new Error(res.message || 'Failed to fetch work data');
+                                }
+                            })
+                        );
+                    }
+
+                    if (userRole === 'admin') {
+                        // Admin-specific refreshes
+                        // Refresh Staffs data
+                        if (typeof populateStaffsTable === 'function') {
+                            refreshTasks.push(window.pywebview.api.fetch_staffs_data('https://docs.google.com/spreadsheets/d/17lOtuHum9VHdukfHr7143uCGydVZSaJNi2RhzGfh81g/edit?gid=1356715801#gid=1356715801')
+                                .then(res => {
+                                    if (res.status === 'ok') {
+                                        window.allStaffsData = Array.isArray(res.payload) ? res.payload : [];
+                                        populateStaffsTable(window.allStaffsData);
+                                    } else {
+                                        throw new Error(res.message || 'Failed to fetch staffs data');
+                                    }
+                                })
+                            );
+                        }
+                        // Refresh Leaves data (for today)
+                        if (typeof fetchAndPopulateLeaves === 'function') {
+                            refreshTasks.push(fetchAndPopulateLeaves(new Date()));
+                        }
+                        // Refresh Stats data (if currentSelectedEmail and datePicker are available)
+                        // Note: fetchAndRenderDashboard is in stats_view.js and is globally available
+                        if (typeof fetchAndRenderDashboard === 'function') {
+                            const statsEmail = window.currentSelectedEmail || window.currentUser?.['E-Mail']; // Use currentSelectedEmail if set, else logged-in user's email
+                            const statsDate = document.querySelector('#epd-date-picker')?.value || new Date().toISOString().slice(0, 10); // Use date picker value if set, else today's date 'YYYY-MM-DD'
+
+                            if (statsEmail) { // Only attempt if we have an email
+                                refreshTasks.push(fetchAndRenderDashboard(statsEmail, statsDate));
+                            } else {
+                                console.warn('Stats refresh skipped: No email available for Stats dashboard.');
+                            }
+                        }
+                        console.log('Admin tasks queued.');
+                    } else {
+                        // User-specific refreshes (Work data already handled above)
+                        // If there are other user-specific views that need refreshing, add them here.
+                        console.log('User tasks queued.');
+                    }
+
+                    // Execute all tasks in parallel and wait for them to complete
+                    const results = await Promise.allSettled(refreshTasks);
+
+                    const failedTasks = results.filter(r => r.status === 'rejected');
+
+                    if (failedTasks.length > 0) {
+                        console.error('Some background refresh tasks failed:', failedTasks);
+                        Swal.fire('รีเฟรชสำเร็จบางส่วน', 'ข้อมูลบางส่วนอาจไม่ล่าสุด กรุณาตรวจสอบ Console', 'warning');
+                    } else {
+                        console.log('All background refresh tasks completed successfully.');
+                        Swal.fire('รีเฟรชสำเร็จ!', 'ข้อมูลในทุกส่วนเป็นเวอร์ชันล่าสุดแล้ว', 'success');
+                    }
+
+                } catch (error) {
+                    console.error("Error during onComplete execution:", error);
+                    Swal.fire('เกิดข้อผิดพลาด', `ไม่สามารถรีเฟรชข้อมูลเบื้องหลังได้: ${error.message}`, 'error');
+                }
+            };
+
+            // Initialize the button now that everything is ready
+            initReloadButton({ clearCaches, onComplete });
+        });
+    </script>
+  </body>
 </html>
+

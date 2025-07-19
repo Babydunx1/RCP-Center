@@ -1,0 +1,658 @@
+/* General Styling */
+
+body {
+    font-family: 'Prompt', sans-serif;
+}
+
+
+:root {
+    --bg-main: #F4F7FC;
+    --bg-sidebar: #FFFFFF;
+    --bg-content: #FFFFFF;
+    --text-primary: #1A202C;
+    --text-secondary: #718096;
+    --accent-color: #F97316;
+    --accent-color-dark: #EA580C;
+    --border-color: #E2E8F0;
+    --green-text: #2F855A;
+    --red-text: #C53030;
+}
+.stats-view-active {
+    background-color: var(--bg-main);
+}
+
+
+.epd-sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.epd-sidebar-header h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+.epd-search-wrapper {
+    position: relative;
+}
+.epd-search-wrapper input {
+    width: 100%;
+    padding: 8px 32px 8px 32px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    font-size: 1rem;
+}
+/* ส่วนลิสต์รายชื่อ จะมีสกอบาร์ของตัวเอง */
+.epd-employee-list {
+    /* กำหนดความสูงสูงสุด (ลูกพี่สามารถปรับตัวเลข 770px นี้ได้ตามใจชอบ) */
+    max-height: 770px;
+    
+    /* สั่งให้มีสกอบาร์เมื่อรายชื่อยาวเกินค่า max-height */
+    overflow-y: auto;
+    
+    /* สไตล์อื่นๆ ที่จำเป็น */
+    list-style: none;
+    padding: 10px;
+    margin: 0;
+    flex-grow: 1; /* ยังคงต้องมีเพื่อให้ layout ไม่พัง */
+}
+.epd-employee-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+.epd-employee-card.active {
+    background: var(--bg-main);
+}
+.epd-employee-card img {
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+}
+.epd-status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    margin-left: auto;
+}
+/* General Styling (scoped, no body/html/global) */
+:root {
+    --bg-main: #F4F7FC;
+    --bg-sidebar: #FFFFFF;
+    --bg-content: #FFFFFF;
+    --text-primary: #1A202C;
+    --text-secondary: #718096;
+    --accent-color: #F97316;
+    --accent-color-dark: #EA580C;
+    --border-color: #E2E8F0;
+    --green-text: #2F855A;
+    --red-text: #C53030;
+}
+
+/* ทำให้ #view-stats ซึ่งเป็น container หลักของหน้านี้ ยืดเต็มพื้นที่ */
+#view-stats {
+    width: 100%;
+    height: 100%; /* ✅ กำหนดความสูงให้เต็มพื้นที่ที่ได้รับ */
+    padding: 0 !important; /* ลบ padding ที่อาจรบกวนการคำนวณความสูง */
+    box-sizing: border-box;
+}
+
+.epd-dashboard-container {
+    display: flex;
+    width: 100%;
+    height: 100%; /* ✅ ส่งต่อความสูง 100% ไปยัง sidebar และ main content */
+    background-color: var(--bg-sidebar);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+}
+
+/* A: Employee Sidebar */
+.epd-employee-sidebar {
+    width: 25%;
+    min-width: 300px;
+    border-right: 1px solid var(--border-color);
+    background-color: var(--bg-sidebar); /* เพิ่มพื้นหลังสีขาวให้ sidebar */
+    display: flex;
+    flex-direction: column;
+    /* ✅✅✅ หัวใจของการแก้ไข: กำหนดความสูงสูงสุดโดยอิงจากหน้าจอ ✅✅✅ */
+    /* คำนวณความสูงจากความสูงของหน้าจอทั้งหมด (100vh) แล้วหักส่วนหัว/ท้ายของโปรแกรมออกไปประมาณ 80px */
+    max-height: calc(100vh - 80px); 
+}
+.epd-sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+.epd-sidebar-header h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+.epd-search-wrapper {
+    position: relative;
+}
+.epd-search-wrapper i {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+}
+.epd-search-wrapper input {
+    width: 80%;
+    padding: 10px 10px 10px 40px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    font-family: 'Prompt', sans-serif;
+    font-size: 14px;
+    outline: none;
+}
+.epd-search-wrapper input:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.2);
+}
+
+/* This will make the employee list scrollable on its own */
+.epd-employee-list {
+    /* 1. คำสั่งให้ยืดเต็มพื้นที่ที่เหลือในแนวตั้ง */
+    flex-grow: 1;
+
+    /* 2. คำสั่งให้สร้างสกอบาร์เมื่อเนื้อหายาวเกิน */
+    overflow-y: auto;
+
+    /* 3. ✅✅✅ ไม้ตาย: คำสั่ง "บังคับ" ให้สกอบาร์ทำงานใน Flexbox ✅✅✅ */
+    min-height: 0;
+
+    /* (สไตล์อื่นๆ ที่ลูกพี่ชอบ) */
+    list-style: none;
+    padding: 10px;
+    margin: 0;
+}
+
+.epd-employee-card {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+    position: relative;
+}
+.epd-employee-card:hover {
+    background-color: #f7fafc;
+}
+.epd-employee-card.active {
+    background-color: #FFF7ED;
+    border-left: 4px solid var(--accent-color);
+    padding-left: 8px;
+}
+.epd-employee-card.active .epd-employee-name {
+    color: var(--accent-color-dark);
+}
+.epd-employee-card img {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin-right: 12px;
+}
+.epd-employee-info {
+    display: flex;
+    flex-direction: column;
+}
+.epd-employee-name {
+    font-weight: 600;
+    font-size: 15px;
+}
+.epd-employee-project {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+.epd-status-dot {
+    position: absolute;
+    right: 15px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+.epd-status-dot.online { background-color: #38A169; }
+.epd-status-dot.offline { background-color: #A0AEC0; }
+
+/* B: Main Content Area */
+.epd-main-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+
+
+    padding: 25px 30px;
+}
+
+/* ส่วนหัวข้อและแท็บ: จะไม่ยืดหรือหด และจะติดอยู่ข้างบนเสมอ */
+.epd-main-header,
+.epd-tabs {
+    flex-shrink: 0;
+}
+
+/* ✅✅✅ ส่วนเนื้อหาที่จะมีสกอบาร์ ✅✅✅ */
+/* เราจะให้กรอบที่หุ้มเนื้อหาของแท็บเป็นส่วนที่เลื่อนได้แทน */
+.epd-tab-content-wrapper {
+    flex-grow: 1; /* ทำให้ยืดเต็มพื้นที่แนวตั้งที่เหลือทั้งหมด */
+    overflow-y: auto; /* 🌟 สั่งให้สกอบาร์แนวตั้งปรากฏที่นี่! */
+    min-height: 0; /* คำสั่งสำคัญเพื่อให้ Flexbox แสดงสกอบาร์ได้ถูกต้อง */
+    padding-top: 5px; /* เพิ่มระยะห่างเล็กน้อย */
+}
+
+.epd-main-header h1 {
+    font-size: 1.75rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+}
+.epd-tabs {
+    display: flex;
+    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 25px;
+}
+.epd-tab-button {
+    padding: 10px 20px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-family: 'Prompt', sans-serif;
+    font-size: 1rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    transition: all 0.2s ease;
+}
+.epd-tab-button i {
+    margin-right: 8px;
+}
+.epd-tab-button.active {
+    color: var(--accent-color);
+    border-bottom-color: var(--accent-color);
+}
+.epd-tab-content {
+    display: none;
+    animation: fadeIn 0.5s ease;
+}
+.epd-tab-content.active {
+    overflow: visible;
+
+    display: block;
+}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+/* KPI Cards Styling */
+.epd-kpi-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+.epd-kpi-card {
+    background-color: #F7FAFC;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+}
+.epd-kpi-card .icon-bg {
+    font-size: 1.5rem;
+    color: var(--accent-color);
+    margin-bottom: 15px;
+}
+.epd-kpi-title {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+}
+.epd-kpi-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+}
+.epd-kpi-value.text-green { color: var(--green-text); }
+.epd-kpi-value.text-red { color: var(--red-text); }
+/* Chart Container */
+.epd-chart-container {
+    margin-top: 24px;
+    background-color: #F7FAFC;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+
+    /* --- ✅✅✅ ส่วนที่เพิ่มเข้ามาเพื่อให้ปรับขนาดได้ ✅✅✅ --- */
+    
+    /* 1. กำหนดความสูงเริ่มต้น (ปรับค่าตรงนี้ได้ตามใจชอบ) */
+    min-height: 300px; 
+    
+    /* 2. ทำให้ปรับขนาดได้ (จะมีที่จับลากที่มุมขวาล่าง) */
+    
+    overflow: auto;    /* ให้มีสกอบาร์ถ้าเนื้อหาข้างในใหญ่กว่ากรอบ */
+}
+
+.epd-chart-container h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 15px;
+}
+/* Page Management Tab Styling */
+.epd-page-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.epd-page-card {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background-color: #FFFFFF;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.epd-page-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 6px 20px rgba(0,0,0,0.08);
+}
+
+.epd-page-card .platform-icon {
+    font-size: 2.5rem;
+    flex-shrink: 0;
+}
+
+.epd-page-card .platform-icon.fb { color: #1877F2; }
+.epd-page-card .platform-icon.ig { 
+    background: radial-gradient(circle at 30% 107%, #fdf497 0%, #fdf497 5%, #fd5949 45%, #d6249f 60%, #285AEB 90%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.epd-page-details {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
+.epd-page-name {
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.epd-page-link {
+    font-size: 13px;
+    color: var(--text-secondary);
+    text-decoration: none;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+}
+
+.epd-page-link:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
+
+.epd-page-status-wrapper {
+    flex-shrink: 0;
+}
+
+.epd-page-status {
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 20px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.epd-page-status.complete { background-color: #E6F4EA; color: #38A169; }
+.epd-page-status.pending { background-color: #FEF3C7; color: #D97706; }
+.epd-page-status.missing { background-color: #FEE2E2; color: #DC2626; }
+
+
+/* Leave Management Tab Styling */
+.epd-leave-request-card {
+    background-color: #FFFBEB;
+    border: 1px solid #FEEBC8;
+    border-left: 5px solid #F6E05E;
+    border-radius: 8px;
+    padding: 20px;
+}
+.epd-leave-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+.epd-leave-header i {
+    color: #D69E2E;
+    font-size: 1.2rem;
+}
+.epd-leave-header h3 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+}
+.epd-leave-body p {
+    margin: 5px 0;
+    font-size: 14px;
+}
+.epd-leave-actions {
+    margin-top: 20px;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+.epd-btn {
+    padding: 8px 20px;
+    border-radius: 6px;
+    border: 1px solid;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-family: 'Prompt', sans-serif;
+}
+.epd-btn.reject {
+    background-color: transparent;
+    border-color: var(--red-text);
+    color: var(--red-text);
+}
+.epd-btn.reject:hover { background-color: #FED7D7; }
+.epd-btn.approve {
+    background-color: #38A169;
+    border-color: #38A169;
+    color: white;
+}
+.epd-btn.approve:hover { background-color: #2F855A; }
+.epd-leave-history {
+    margin-top: 30px;
+}
+
+
+
+
+/* === Styling for Date Picker Button === */
+
+/* ทำให้ปุ่มดูเข้ากับ Header มากขึ้น */
+.epd-main-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px; /* เพิ่มระยะห่างระหว่างชื่อกับปุ่ม */
+}
+
+/* จัดสไตล์ให้ตัว Input ที่เป็นปุ่มโดยตรง */
+.epd-date-picker-wrapper .form-control.input {
+    /* Shape & Size */
+    width: 200px !important;
+    padding: 10px 20px !important;
+    border-radius: 8px !important;
+    
+    /* Colors & Border - **ส่วนสำคัญ** */
+    background-color: #FFFFFF !important;       /* พื้นหลังสีขาว */
+    border: 1px solid var(--border-color) !important; /* ขอบสีเทาอ่อนๆ (เหมือนการ์ด) */
+    color: var(--text-primary) !important;      /* ตัวหนังสือสีดำเทา */
+
+    /* Font & Text */
+    font-family: 'Prompt', sans-serif !important;
+    font-weight: 600 !important;
+    text-align: center !important;
+    
+    /* Behavior */
+    cursor: pointer !important;
+    outline: none !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.04) !important; /* เงาบางๆ */
+    transition: all 0.2s ease-in-out;
+}
+
+/* เอฟเฟกต์ตอนเอาเมาส์ไปวาง */
+.epd-date-picker-wrapper .form-control.input:hover {
+    border-color: #FDBA74 !important; /* ขอบเปลี่ยนเป็นสีส้มอ่อน */
+}
+
+/* เอฟเฟกต์ตอนคลิก (Focus) */
+.epd-date-picker-wrapper .form-control.input:focus {
+    border-color: var(--accent-color) !important; /* ขอบเป็นสีส้มเข้ม */
+    box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.2) !important;
+}
+
+/* เอฟเฟกต์ตอนคลิก (Focus) */
+.epd-date-picker-wrapper .form-control.input:focus {
+    border-color: #979797 !important;
+    box-shadow: 0 0 0 3px rgba(214, 214, 214, 0.4) !important;
+}
+
+/* ตัว Input ที่แสดงวันที่ */
+#epd-date-picker {
+    border: none;
+    background: transparent;
+    outline: none;
+    padding: 10px 15px 10px 10px;
+    font-family: 'Prompt', sans-serif;
+    font-size: 14px;
+    font-weight: 600; /* ทำให้ตัวหนังสือหนาขึ้น */
+    color: var(--text-primary);
+    cursor: pointer;
+    width: 170px; /* กำหนดความกว้างให้พอดี */
+}
+
+/* === Customizing Flatpickr Calendar Theme === */
+/* ปรับแต่งหน้าตาปฏิทินที่เด้งขึ้นมา */
+
+/* === ปรับธีมปฏิทินที่เด้งขึ้นมาให้เป็นโทนส้ม === */
+.flatpickr-calendar {
+    border-color: var(--border-color) !important;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.1) !important;
+}
+.flatpickr-day.selected, 
+.flatpickr-day.today.selected,
+.flatpickr-day.today:hover {
+    background: var(--accent-color) !important;
+    border-color: var(--accent-color) !important;
+}
+.flatpickr-day:hover {
+    background: #FFF7ED !important; /* สีส้มอ่อนมากตอน hover */
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.flatpickr-prev-month, .flatpickr-next-month {
+    fill: var(--accent-color); /* เปลี่ยนสีลูกศรเป็นสีส้ม */
+}
+.flatpickr-prev-month:hover svg, .flatpickr-next-month:hover svg {
+    fill: var(--accent-color-dark);
+}
+
+
+/* === Force Scrollbar Fix === */
+
+/* บังคับให้พื้นที่แสดงผลหลักด้านขวามีขนาดที่แน่นอนและมีสกอบาร์ */
+.epd-main-content {
+    /* คำนวณความสูงโดยอิงจากความสูงของหน้าจอทั้งหมด (100vh) 
+      แล้วหักลบความสูงของส่วนหัวโปรแกรมและ padding ออกไปประมาณ 54px 
+    */
+    height: calc(100vh - 54px) !important;
+    
+    /* สั่งให้แสดงสกอบาร์แนวตั้ง "ตลอดเวลา" เพื่อให้เห็นชัดๆ ว่ามันทำงานแล้ว */
+    
+}
+
+/* === Custom Scrollbar Styling === */
+
+/* กำหนดสไตล์ให้ "ตัวเลื่อน" สกอบาร์ (Thumb) */
+.epd-tab-content-wrapper::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color); /* สีส้ม */
+    border-radius: 10px; /* ทำให้ขอบมน */
+    border: 3px solid transparent; /* สร้างระยะห่างจากขอบ */
+    background-clip: content-box;
+}
+
+.epd-tab-content-wrapper::-webkit-scrollbar-thumb:hover {
+    background-color: var(--accent-color-dark); /* สีส้มเข้มขึ้นเมื่อเมาส์ไปวาง */
+}
+
+/* กำหนดสไตล์ให้ "ราง" ของสกอบาร์ (Track) */
+.epd-tab-content-wrapper::-webkit-scrollbar-track {
+    background: transparent; /* ทำให้รางโปร่งใส */
+    margin: 5px;
+}
+
+/* ✅✅✅ ส่วนที่ทำให้สกอบาร์ขยายตอน Hover ✅✅✅ */
+
+/* 1. กำหนดขนาดเริ่มต้นของสกอบาร์ให้เล็กๆ */
+.epd-tab-content-wrapper::-webkit-scrollbar {
+    width: 8px;
+    transition: width 0.2s ease-in-out;
+}
+
+/* 2. เมื่อเอาเมาส์ไปวางบนพื้นที่เนื้อหา (.epd-tab-content-wrapper) 
+      จะสั่งให้สกอบาร์ขยายใหญ่ขึ้น */
+.epd-tab-content-wrapper:hover::-webkit-scrollbar {
+    width: 10px;
+}
+
+
+/* === Custom Orange Scrollbar for Employee List === */
+
+/* 1. กำหนดขนาดเริ่มต้นของสกอบาร์ให้เล็กๆ */
+.epd-employee-list::-webkit-scrollbar {
+    width: 8px; /* ความกว้างเริ่มต้น */
+    transition: width 0.2s ease-in-out; /* ทำให้การขยายตัวนุ่มนวล */
+}
+
+/* 2. เมื่อเอาเมาส์ไปวางบน "กล่องรายชื่อ" สกอบาร์จะขยายใหญ่ขึ้น */
+.epd-employee-list:hover::-webkit-scrollbar {
+    width: 10px; /* ความกว้างเมื่อขยาย */
+}
+
+/* 3. สไตล์ของ "ราง" สกอบาร์ (ทำให้โปร่งใส) */
+.epd-employee-list::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+/* 4. สไตล์ของ "ตัวเลื่อน" สกอบาร์ (หัวใจสำคัญ) */
+.epd-employee-list::-webkit-scrollbar-thumb {
+    background-color: var(--accent-color); /* สีส้ม */
+    border-radius: 10px;
+    border: 3px solid var(--bg-sidebar); /* สร้างขอบสีขาวรอบๆ ตัวเลื่อน */
+    background-clip: content-box;
+}
+
+.epd-employee-list::-webkit-scrollbar-thumb:hover {
+    background-color: var(--accent-color-dark); /* สีส้มเข้มขึ้นเมื่อเมาส์ไปวาง */
+}

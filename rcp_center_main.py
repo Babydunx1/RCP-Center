@@ -4,7 +4,10 @@ import json
 import os
 import calendar
 import sys
+import time
+import traceback  # ✅✅✅ เพิ่มบรรทัดนี้เข้าไปครับ ✅✅✅
 from datetime import datetime # Added this line
+
 import g_sheet_api
 from g_sheet_api import (
     get_employee_sheet,
@@ -17,6 +20,37 @@ from g_sheet_api import (
     get_all_tab_names,
     get_leaves_list_data
 )
+
+
+# ─── File-based Cache Helpers ───────────────────────────
+CACHE_TTL = 60 * 60
+CACHE_DIR = os.path.join(os.path.dirname(__file__), 'cache')
+os.makedirs(CACHE_DIR, exist_ok=True)
+
+
+def _cache_file(name: str) -> str:
+    return os.path.join(CACHE_DIR, f"{name}.json")
+
+def _load_cache(name: str):
+    path = _cache_file(name)
+    if os.path.exists(path) and time.time() - os.path.getmtime(path) < CACHE_TTL:
+        print(f"[DEBUG][Cache] Loaded disk cache for '{name}'")
+        with open(path, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return None
+
+def _save_cache(name: str, data):
+    path = _cache_file(name)
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False)
+    print(f"[DEBUG][Cache] Saved disk cache for '{name}'")
+
+    # ▶ เพิ่มสองบรรทัดนี้ ต่อท้าย helper block เลย
+_load_file_cache = _load_cache
+_save_file_cache = _save_cache
+
+# ──────────────────────────────────────────────────────
+
 
 
 def canonical_id(name):
@@ -34,6 +68,396 @@ def get_path(relative_path):
     return os.path.join(base_path, relative_path)
 
 class Api:
+
+    def get_staffs_cached(self, max_age_sec=300):
+        """ดึงหน้าตาราง Staffs (cache เป็นไฟล์)"""
+        name = 'staffs'
+        data = _load_cache(name)
+        if data is not None:
+            return data
+
+        print("[Cache] fetching new 'staffs'")
+        staffs = get_staffs_data(self.sheet_url, sheet_name="Staffs")
+        _save_cache(name, staffs)
+        return staffs
+
+    def get_transaction_cached(self, max_age_sec=3600):
+        now = time.time()
+
+        # 1) ดูในหน่วยความจำก่อน
+        if self._transaction_cache and (now - self._transaction_cache_time < max_age_sec):
+            print("[DEBUG][Cache] Using RAM cache for Transaction")
+            return self._transaction_cache
+
+        # 2) ถ้า RAM หมดอายุ ลองดูในไฟล์ก่อน
+        disk = _load_file_cache('transaction')
+        if disk is not None:
+            self._transaction_cache = disk
+            self._transaction_cache_time = now
+            return disk
+
+        # 3) สุดท้าย fetch ใหม่จาก Google Sheets
+        print("[DEBUG][Cache] Fetching new Transaction data from API")
+        try:
+            transactions = g_sheet_api.get_staffs_data(self.sheet_url, sheet_name="Transaction")
+            self._transaction_cache = transactions
+            self._transaction_cache_time = now
+            _save_file_cache('transaction', transactions)
+            return transactions
+        except Exception as e:
+            print(f"[ERROR][Python API] Failed to load transaction data: {e}")
+            self._transaction_cache = None
+            return []
+
+    def get_employee_sheet_cached(self, sheet_name, max_age_sec=3600):
+        """ดึงซ้ำ Project แต่ละ Tab จากไฟล์ cache ก่อน ถ้าไม่มีค่อย fetch ใหม่"""
+        key = sheet_name.lower().replace(" ", "_")
+        data = _load_cache(f"sheet_{key}")
+        if data is not None:
+            return data
+
+        print(f"[Cache] fetching new sheet '{sheet_name}'")
+        lst = get_employee_sheet(self.sheet_url, sheet_name=sheet_name).get('reels', [])
+        _save_cache(f"sheet_{key}", lst)
+        return lst
+
+    def get_monthly_summary_cached(self, year, month, max_age_sec=3600):
+        key = f"summary_{year}_{month}"
+        now = time.time()
+        if key in self._monthly_summary_cache and (now - self._monthly_summary_cache_time[key] < max_age_sec):
+            return self._monthly_summary_cache[key]
+
+        disk = _load_file_cache(key)
+        if disk is not None:
+            self._monthly_summary_cache[key] = disk
+            self._monthly_summary_cache_time[key] = now
+            return disk
+
+        print(f"[DEBUG][Cache] Fetching new Monthly Summary for {month}/{year}")
+        try:
+            data = get_monthly_summary_data(self.sheet_url, year, month)
+            self._monthly_summary_cache[key] = data
+            self._monthly_summary_cache_time[key] = now
+            _save_file_cache(key, data)
+            return data
+        except Exception as e:
+            print(f"[ERROR][Python API] Failed to load monthly summary: {e}")
+            return []
+
+
+    def clear_caches(self):
+        self._transaction_cache      = None
+        self._transaction_cache_time = 0
+        self._staffs_cache           = None
+        self._staffs_cache_time      = 0
+        self._monthly_summary_cache.clear()
+        self._monthly_summary_cache_time.clear()
+
+        # ลบไฟล์ cache ทั้งหมดในโฟลเดอร์ cache/
+        for fn in os.listdir(CACHE_DIR):
+            if fn.endswith('.json'):
+                os.remove(os.path.join(CACHE_DIR, fn))
+
+        print("[DEBUG][Cache] All caches cleared")
+        return {"status": "ok"}
+
+    # ✅✅✅ เพิ่มฟังก์ชันนี้เข้าไปในคลาส Api ✅✅✅
+    def get_transaction_cached(self, max_age_sec=3600):
+        """
+        ดึงข้อมูลจากชีต Transaction โดยใช้ระบบ Cache เพื่อความเร็ว
+        """
+        import time
+        now = time.time()
+        # ถ้ามี Cache อยู่และยังไม่หมดอายุ (5 นาที) ให้ใช้ Cache
+        if self._transaction_cache and (now - self._transaction_cache_time < max_age_sec):
+            print("[DEBUG][Cache] Using cached Transaction data.")
+            return self._transaction_cache
+        
+        # ถ้าไม่มี Cache หรือหมดอายุแล้ว ให้ไปดึงใหม่
+        print("[DEBUG][Cache] Fetching new Transaction data.")
+        try:
+            transactions = g_sheet_api.get_staffs_data(self.sheet_url, sheet_name="Transaction")
+            self._transaction_cache = transactions
+            self._transaction_cache_time = now
+            return transactions
+        except Exception as e:
+            print(f"[ERROR][Python API] Failed to load transaction data (cache): {e}")
+            self._transaction_cache = None # เคลียร์ cache ถ้าดึงข้อมูลใหม่ไม่สำเร็จ
+            return []
+
+
+    # วางฟังก์ชันนี้ต่อจากฟังก์ชันอื่นในคลาส Api ได้เลยครับ
+    def get_all_staff_for_dashboard(self):
+        try:
+            staffs_raw_data = g_sheet_api.get_staffs_data(self.sheet_url, sheet_name="Staffs")
+
+            # --- ส่วนที่เพิ่มเข้ามา: หาวันที่ล่าสุด ---
+            latest_data_date = None
+            try:
+                transaction_data = g_sheet_api.get_staffs_data(self.sheet_url, sheet_name="Transaction")
+                dates_in_sheet = []
+                for row in transaction_data:
+                    date_str = row.get('SubmissionDate')
+                    if not date_str or not date_str.strip():
+                        continue
+                    
+                    try:
+                        # มีความยืดหยุ่นต่อ space และรูปแบบ dd/mm/yyyy หรือ d/m/yyyy
+                        day, month, year = map(int, date_str.strip().split('/'))
+                        if year < 100:
+                            year += 2000
+                        dates_in_sheet.append(datetime(year, month, day))
+                    except (ValueError, TypeError) as ve:
+                        print(f"[WARN] Could not parse date '{date_str}'. Error: {ve}. Skipping.")
+                        continue
+
+                if dates_in_sheet:
+                    latest_data_date = max(dates_in_sheet).strftime('%Y-%m-%d')
+            except Exception as e:
+                print(f"[WARN] Could not determine latest date: {e}")
+                traceback.print_exc()
+            # --- สิ้นสุดส่วนที่เพิ่ม ---
+
+            employee_list = [{
+                "name": staff.get("Name", "-"),
+                "email": staff.get("E-Mail", ""),
+                "project": staff.get("Project Name", "-"),
+                "status": "online" if staff.get("Status", "").lower() == 'active' else 'offline',
+                "avatar": staff.get("AvatarUrl", "https://i.pravatar.cc/40")
+            } for staff in staffs_raw_data]
+            
+            return {"status": "ok", "payload": {"staffs": employee_list, "latest_date": latest_data_date}}
+
+        except Exception as e:
+            print(f"[ERROR][Python API] get_all_staff_for_dashboard: {e}")
+            return {"status": "error", "message": str(e)}
+
+
+    # วางฟังก์ชันนี้ต่อจากฟังก์ชันอื่นในคลาส Api
+
+    def get_employee_page_details(self, email, date_str):
+        """
+        API สำหรับดึงข้อมูล "เฉพาะ" ส่วนของการ์ดเพจ (Page Cards)
+        สำหรับหน้า Stats & Analytics
+        """
+        print(f"[API] Fetching PAGE DETAILS for {email} on {date_str}")
+        try:
+            selected_date = datetime.strptime(date_str, "%Y-%m-%d")
+            sheet_date_format = selected_date.strftime('%#d/%#m/%Y')
+            
+            # 1. ดึงข้อมูลพื้นฐานของพนักงาน
+            staffs_data = self.get_staffs_cached()
+            staff_info = next((s for s in staffs_data if s.get("E-Mail") == email), {})
+            if not staff_info:
+                return {"status": "error", "message": "ไม่พบข้อมูลพนักงาน"}
+
+            project_sheet_name = staff_info.get("Project Name")
+            daily_target = int(staff_info.get("DailyTarget", 2))
+
+            # 2. ดึงข้อมูล Transaction ของวันนั้นๆ
+            transaction_data = g_sheet_api.get_staffs_data(self.sheet_url, sheet_name="Transaction")
+            employee_transactions = [row for row in transaction_data if row.get('EmployeeEmail') == email and row.get('SubmissionDate') == sheet_date_format]
+
+            # 3. ดึงข้อมูลจากชีต Project ของพนักงาน
+            project_sheet_data = []
+            if project_sheet_name:
+                project_sheet_data = g_sheet_api.get_employee_sheet(self.sheet_url, sheet_name=project_sheet_name).get('reels', [])
+            daily_project_data = [row for row in project_sheet_data if row.get('Date') == sheet_date_format]
+
+            # 4. รวบรวมข้อมูล Page Cards (รองรับกรณีไม่มีชื่อเพจ)
+            unique_pages = {}
+            for row in employee_transactions:
+                # ใช้ลิงก์เป็น key เพื่อ dedupe และให้แสดงแม้ไม่มีชื่อเพจ
+                link = row.get('LinkPage', '').strip()
+                if not link or link in unique_pages:
+                    continue
+
+                page_name = row.get('NamePage', '').strip()  # อาจเป็น "" ก็ได้
+                platform  = 'ig' if 'instagram.com' in link.lower() else 'fb'
+
+                # หาแถวของเพจใน daily_project_data (เช็ค PageName)
+                proj_row = next(
+                    (p for p in daily_project_data
+                    if p.get('PageName', '').strip().lower() == page_name.lower()),
+                    None
+                )
+                try:
+                    clips_sent = int(proj_row.get('Clips_Sent', 0))
+                except (ValueError, AttributeError):
+                    clips_sent = 0
+
+                # กำหนดสถานะการส่ง
+                if clips_sent >= daily_target:
+                    sent_status = 'complete'
+                elif clips_sent > 0:
+                    sent_status = 'pending'
+                else:
+                    sent_status = 'missing'
+
+                unique_pages[link] = {
+                    "name":     page_name,         # จะแสดงช่องชื่อเปล่าได้
+                    "link":     link,
+                    "platform": platform,
+                    "status":   sent_status,
+                    "sent":     f"{clips_sent}/{daily_target}"
+                }
+
+            return {"status": "ok", "payload": list(unique_pages.values())}
+
+        except Exception as e:
+            print(f"[ERROR][Python API] get_employee_page_details: {e}")
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}
+
+    def get_employee_dashboard_data(self, email, date_str):
+        """
+        API สำหรับดึงข้อมูลทั้งหมดสำหรับหน้า Stats Dashboard (เวอร์ชันแก้ไข Error และใช้ Project Name ในการ map)
+        """
+        print(f"[API] Fetching final dashboard data for {email} on {date_str}")
+        try:
+            # === STEP 1: PREPARATION (ส่วนนี้ถูกต้องแล้ว) ===
+            selected_date = datetime.strptime(date_str, "%Y-%m-%d")
+            possible_date_formats = {
+                selected_date.strftime('%d/%m/%Y'),
+                f"{selected_date.day}/{selected_date.month}/{selected_date.year}"
+            }
+            
+            # === STEP 2: FETCH DATA (ส่วนนี้ถูกต้องแล้ว) ===
+            staffs_data = self.get_staffs_cached()
+            transaction_data = self.get_transaction_cached()
+            monthly_summary_data = self.get_monthly_summary_cached(selected_date.year, selected_date.month)
+
+            staff_info = next((s for s in staffs_data if s.get("E-Mail", "").strip().lower() == email.strip().lower()), None)
+            if not staff_info:
+                return {"status": "error", "message": f"ไม่พบข้อมูลพนักงานสำหรับ {email}"}
+
+            employee_transactions = [
+                row for row in transaction_data 
+                if row.get('EmployeeEmail', '').strip().lower() == email.strip().lower() 
+                and row.get('SubmissionDate', '').strip() in possible_date_formats
+            ]
+
+            # === STEP 3: BUILD PAGE CARDS (รองรับกรณีไม่มีชื่อเพจ) ===
+            # กำหนดค่า daily_target_per_page จากข้อมูล staff_info
+            # ← อย่าลืมกำหนด daily_target_per_page ก่อนใช้
+            daily_target_per_page = int(staff_info.get("DailyTarget", 2))
+            page_cards_list = []
+            seen_links = set()
+            # daily_target_per_page มาจากด้านบน
+            for row in employee_transactions:
+                link = row.get('LinkPage', '').strip()
+                # ถ้าไม่มีลิงก์ หรือเคยประมวลผลแล้ว ข้ามไป
+                if not link or link in seen_links:
+                    continue
+                seen_links.add(link)
+
+                # ชื่อเพจอาจว่างได้
+                page_name = row.get('NamePage', '').strip()
+
+                # แยกแพลตฟอร์ม
+                platform = 'ig' if 'instagram.com' in link.lower() else 'fb'
+
+                # คำนวณจำนวนคลิปที่ส่ง
+                clips_sent = 0
+                clips_val = row.get('Clips_Sent', '').strip()
+                if clips_val.isdigit():
+                    clips_sent = int(clips_val)
+                else:
+                    # ถ้าไม่มีคอลัมน์ Clips_Sent ก็ลองนับจาก Link1/Link2
+                    if row.get('Link1', '').strip():
+                        clips_sent += 1
+                    if row.get('Link2', '').strip():
+                        clips_sent += 1
+
+                # กำหนดสถานะ
+                if clips_sent >= daily_target_per_page:
+                    status_class = 'complete'
+                elif clips_sent > 0:
+                    status_class = 'pending'
+                else:
+                    status_class = 'missing'
+
+                # เก็บผล
+                page_cards_list.append({
+                    'name':     page_name,                   # อาจเป็น "" ก็ยังแสดงกล่อง
+                    'link':     link,
+                    'platform': platform,
+                    'status':   status_class,
+                    'sent':     f'{clips_sent}/{daily_target_per_page}'
+                })
+
+            # === STEP 4: CALCULATE KPIs (แก้ไขให้ถูกต้องตาม Logic ของลูกพี่) ===
+            pages_managed_kpi = len(page_cards_list)
+            
+            
+            
+            # ✅ 1. แก้ไข NameError โดยกำหนดค่าเริ่มต้นให้ตัวแปรที่อาจไม่ถูกสร้าง
+            total_clips_today = 0
+            submission_status_kpi = "ยังไม่ส่ง" # ตั้งค่าเริ่มต้น
+            leave_status_kpi = "ปกติ"      # ตั้งค่าเริ่มต้น
+
+            try:
+                # ✅ ใช้ "Project Name" จาก staff_info ในการค้นหา
+                staff_project_name = staff_info.get('Project Name', '').strip()
+                summary_for_staff = next((s for s in monthly_summary_data if s.get('projectName', '').strip().lower() == staff_project_name.lower()), None)
+
+                if summary_for_staff:
+                    daily_dict = summary_for_staff.get('dailyData', {})
+                    # int-key (18) จะ match กับ processed_data, ถ้าไม่เจอ ค่อยลอง str
+                    day_data = daily_dict.get(selected_date.day) or daily_dict.get(str(selected_date.day))
+                    if day_data:
+                        # ✅✅✅ ดึงค่าจากชีตมาแสดงตรงๆ ตามที่ลูกพี่ต้องการสำหรับหน้า Stats ✅✅✅
+                        total_clips_today = day_data.get('clips', 0)
+                        
+                        # Logic เดิมใน g_sheet_api แปลง 'สถานะ' เป็น 'status' (เช่น 'complete', 'missing')
+                        # เราจะแปลงมันกลับเป็นภาษาไทยที่สวยงามสำหรับ UI
+                        status_from_api = day_data.get('status', 'nodata')
+
+                        if status_from_api == 'complete':
+                            submission_status_kpi = "ส่งครบ"
+                        elif status_from_api == 'missing':
+                            submission_status_kpi = "ขาดส่ง"
+                        elif status_from_api == 'holiday':
+                            submission_status_kpi = "ลา"
+                        else: # 'nodata'
+                            submission_status_kpi = "ยังไม่ส่ง"
+                        
+                        # แยกเช็คสถานะการลา
+                        if status_from_api == 'holiday':
+                            leave_status_kpi = "ลา"
+
+                    else:
+                        # ถ้าไม่เจอข้อมูลของ "วัน" นั้นๆ ใน summary
+                        submission_status_kpi = "ยังไม่ส่ง"
+                else:
+                     # ถ้าไม่เจอข้อมูลของ "โปรเจกต์" นั้นๆ ใน summary
+                     submission_status_kpi = "ไม่มีข้อมูลสรุป"
+
+            except Exception as e_summary:
+                print(f"[ERROR] เกิดข้อผิดพลาดขณะประมวลผล KPI ของหน้า Stats: {e_summary}")
+                submission_status_kpi = "Error"
+                leave_status_kpi = "Error"
+
+            kpi_data = { 
+                "pages_managed": pages_managed_kpi,
+                "submission_status": submission_status_kpi,
+                "total_clips_today": total_clips_today, 
+                "leave_status": leave_status_kpi 
+            }
+
+            # === STEP 5: ASSEMBLE FINAL PAYLOAD ===
+            dashboard_payload = {
+                "kpi_cards": kpi_data,
+                "page_cards": page_cards_list
+            }
+            return {"status": "ok", "payload": dashboard_payload}
+
+        except Exception as e:
+            print(f"[ERROR][Python API] get_employee_dashboard_data: {e}")
+            traceback.print_exc()
+            return {"status": "error", "message": str(e)}
+        
+
     def __init__(self, sheet_url):
         self.sheet_url = sheet_url
         self.current_user = None
@@ -42,8 +466,12 @@ class Api:
         self._staffs_cache_time = 0
         self._monthly_summary_cache = {} # Cache for monthly data { (year, month): data }
         self._monthly_summary_cache_time = {} # Timestamp for each cache entry
+        self._transaction_cache = None
+        self._transaction_cache_time = 0
+        self._employee_sheet_cache      = {}
+        self._employee_sheet_cache_time = {}
 
-    def get_monthly_summary_cached(self, year, month, max_age_sec=600):
+    def get_monthly_summary_cached(self, year, month, max_age_sec=3600):
         import time
         now = time.time()
         cache_key = (year, month)
@@ -107,95 +535,139 @@ class Api:
 
 
 
-    def get_staffs_cached(self, max_age_sec=300):
-        import time
+    def get_staffs_cached(self, max_age_sec=3600):
         now = time.time()
         if self._staffs_cache and (now - self._staffs_cache_time < max_age_sec):
             return self._staffs_cache
+
+        disk = _load_file_cache('staffs')
+        if disk is not None:
+            self._staffs_cache = disk
+            self._staffs_cache_time = now
+            return disk
+
+        print("[DEBUG][Cache] Fetching new Staffs data from API")
         try:
             staffs = get_staffs_data(self.sheet_url, sheet_name="Staffs")
             self._staffs_cache = staffs
             self._staffs_cache_time = now
+            _save_file_cache('staffs', staffs)
             return staffs
         except Exception as e:
-            print(f"[ERROR][Python API] Failed to load staffs data (cache): {e}")
+            print(f"[ERROR][Python API] Failed to load staffs data: {e}")
             return []
 
     def login(self, email, remember=False):
         print(f"[DEBUG][Python API] Login request for email: {email}")
+
+        # 1. ดึงข้อมูลพนักงาน (cached)
         staffs = self.get_staffs_cached()
         print(f"[DEBUG][Python API] Fetched staffs data: {len(staffs)} records (cached)")
 
-        match = next((s for s in staffs if s.get("E-Mail", "").strip().lower() == email.strip().lower()), None)
+        # 2. หา user record
+        match = next(
+            (s for s in staffs
+            if s.get("E-Mail", "").strip().lower() == email.strip().lower()),
+            None
+        )
         if not match:
             print(f"[DEBUG][Python API] User not found for email: {email}")
             return {"status": "error", "message": "ไม่พบผู้ใช้งาน"}
 
-        role = match.get("Role", "User")
-        project_name_raw = match.get("Project Name", "").strip()
-        project_id = canonical_id(project_name_raw)
+        # 3. อ่าน role และ project info
+        role               = match.get("Role", "User")
+        project_name_raw   = match.get("Project Name", "").strip()
+        project_id         = canonical_id(project_name_raw)
+        print(f"[DEBUG][Python API] User '{email}' found. Role: '{role}', Project Name: '{project_name_raw}', Project ID: '{project_id}'")
 
-        print(f"[DEBUG][Python API] User '{email}' found. Role: '{role}', Project Name (raw): '{project_name_raw}', Project ID: '{project_id}'")
-
+        # 4. กำหนด AllowedProjects & ProjectMap
         if role.lower() == 'admin':
-            all_tabs = get_all_tab_names(self.sheet_url)
-            exclude_tabs = {"Staffs", "Leaves", "Salary", "Stats", "Notifications", "Export Data", "Settings", "Admin Dashboard"}
-            allowed = []
-            project_map = {}
-            staffs_data = staffs  # use cached
-            project_owner_map = {}
-            for staff in staffs_data:
-                staff_project = staff.get("Project Name", "").strip()
-                staff_email = staff.get("E-Mail", "").strip()
-                if staff_project and staff_email:
-                    pid = canonical_id(staff_project)
-                    if pid not in project_owner_map:
-                        project_owner_map[pid] = staff_email
+            all_tabs      = get_all_tab_names(self.sheet_url)
+            exclude_tabs  = {
+                "Staffs", "Leaves", "Salary", "Stats",
+                "Notifications", "Export Data", "Settings", "Admin Dashboard"
+            }
+            allowed       = []
+            project_map   = {}
+            # สร้าง map ของเจ้าของโปรเจกต์
+            owner_map = {}
+            for s in staffs:
+                p = s.get("Project Name", "").strip()
+                e = s.get("E-Mail", "").strip()
+                if p and e:
+                    pid = canonical_id(p)
+                    owner_map.setdefault(pid, e)
+
             for tab in all_tabs:
                 if tab not in exclude_tabs:
                     pid = canonical_id(tab)
                     allowed.append(pid)
-                    owner_email = project_owner_map.get(pid, None)
-                    project_map[pid] = {"tab": tab, "owner": owner_email}
-            print(f"[DEBUG][Python API] Admin mode. All tabs: {all_tabs}, Allowed projects (canonical): {allowed}, Project Map: {project_map}")
-        else:
-            allowed = [project_id] if project_id else []
-            project_map = {project_id: {"tab": project_name_raw, "owner": email}} if project_id else {}
-            print(f"[DEBUG][Python API] User mode. Allowed projects (canonical): {allowed}, Project Map: {project_map}")
+                    project_map[pid] = {"tab": tab, "owner": owner_map.get(pid)}
 
+            print(f"[DEBUG][Python API] Admin mode. Allowed projects: {allowed}")
+            print(f"[DEBUG][Python API] Project Map: {project_map}")
+        else:
+            allowed     = [project_id] if project_id else []
+            project_map = {
+                project_id: {"tab": project_name_raw, "owner": email}
+            } if project_id else {}
+            print(f"[DEBUG][Python API] User mode. Allowed projects: {allowed}")
+
+        # 5. เซ็ต current_user
         self.current_user = {
-            "E-Mail": email,
-            "Role": role,
+            "E-Mail":         email,
+            "Role":           role,
             "AllowedProjects": allowed,
-            "ProjectMap": project_map
+            "ProjectMap":     project_map
         }
         print(f"[DEBUG][Python API] Current user set: {self.current_user}")
 
+        # 6. บันทึก token ถ้ามี remember
         if remember:
             token_data = {"email": email, "role": role}
             token_path = os.path.join(os.path.dirname(__file__), 'user_token.json')
             with open(token_path, 'w', encoding='utf-8') as f:
                 json.dump(token_data, f)
             print(f"[DEBUG][Python API] Remember Me: Token saved to {token_path}")
-        
-        # Pre-load Leaves data for admin users in a background thread
-        if role.lower() == 'admin':
-            print("[DEBUG][Python API] Admin user logged in. Starting background pre-load of Leaves data...")
-            # Start pre-loading in a separate thread to avoid blocking the UI
-            threading.Thread(target=self.fetch_leaves_list).start()
-            print("[DEBUG][Python API] Background pre-load thread for Leaves data started.")
+
+        # 7. Pre-warm caches & project sheets ใน background
+        def _prewarm():
+            print("[DEBUG][Python API] Pre-warming caches...")
+            try:
+                # พื้นฐาน
+                self.get_transaction_cached()
+                self.get_staffs_cached()
+                now = datetime.now()
+                self.get_monthly_summary_cached(now.year, now.month)
+
+                # ถ้าเป็น admin ให้โหลด sheet ของทุกโปรเจกต์
+                if role.lower() == 'admin':
+                    for pid, info in project_map.items():
+                        tab = info.get("tab")
+                        if not tab:
+                            continue
+                        try:
+                            print(f"[DEBUG][Python API] Pre-warming sheet '{tab}'")
+                            self.get_employee_sheet_cached(tab)
+                            print(f"[DEBUG][Python API] Pre-warmed sheet '{tab}' successfully")
+                        except Exception as e:
+                            # ไม่ให้ thread crash, แค่ log error
+                            print(f"[ERROR][Cache Prewarm] Failed to prewarm '{tab}': {e}")
+
+                # ตบท้ายด้วยดึง Leaves ไว้ดูทันที
+                print("[DEBUG][Python API] Pre-warming Leaves data")
+                self.fetch_leaves_list()
+            except Exception as e:
+                print(f"[ERROR][Cache Prewarm] Unexpected error in prewarm: {e}")
+            finally:
+                print("[DEBUG][Python API] Pre-warm complete.")
+
+        threading.Thread(target=_prewarm, daemon=True).start()
 
         return {
-            "status": "ok",
+            "status":  "ok",
             "payload": self.current_user
         }
-
-        # Pre-load Leaves data for admin users in a background thread
-        if role.lower() == 'admin':
-            print("[DEBUG][Python API] Admin user logged in. Starting background pre-load of Leaves data...")
-            # Start pre-loading in a separate thread to avoid blocking the UI
-            threading.Thread(target=self.fetch_leaves_list).start()
-            print("[DEBUG][Python API] Background pre-load thread for Leaves data started.")
 
     def logout(self):
         self.current_user = None

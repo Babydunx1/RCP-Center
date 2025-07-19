@@ -9,6 +9,34 @@ let projectMap = {}; // projectId => SheetName
 let currentProjectId = null;
 let currentProjectSheetName = ''; // ✅ ตั้งค่าเริ่มต้นเป็นสตริงว่างเปล่า
 
+// === View Switcher ===
+function showView(viewId) {
+    // Hide all views
+    document.querySelectorAll('.main > div, .main > .view, .main > .hidden-view').forEach(el => el.classList.add('hidden-view'));
+    // Show target view
+    const view = document.getElementById(viewId);
+    if (view) {
+        view.classList.remove('hidden-view');
+        // Special: add stats-view-active class to body when stats is active
+        if (viewId === 'view-stats') {
+            document.body.classList.add('stats-view-active');
+        } else {
+            document.body.classList.remove('stats-view-active');
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Admin menu: Stats
+    const statsMenu = document.querySelector('#admin-menu [data-view="stats"]');
+    if (statsMenu) {
+        statsMenu.addEventListener('click', function(e) {
+            e.preventDefault();
+            showView('view-stats');
+        });
+    }
+});
+
 // === Helper ===
 const getVal = (obj, field) => {
   const key = Object.keys(obj).find(k => k.trim().toLowerCase() === field.toLowerCase());
@@ -359,6 +387,59 @@ function initApp(user) {
             .then(() => {
             // หลังจาก fetch โปรเจกต์เสร็จ สลับ view ไปหน้า Home
             window.switchView('home');
+
+            // --- NEW: Pre-load data for other tabs if Admin --- 
+            if (currentUser.Role?.toLowerCase() === 'admin') {
+                console.log('[JS DEBUG] Admin user logged in. Pre-loading data for other tabs...');
+                const adminPreloadTasks = [];
+
+                // Pre-load Staffs data
+                if (typeof populateStaffsTable === 'function') {
+                    adminPreloadTasks.push(window.pywebview.api.fetch_staffs_data('https://docs.google.com/sheets/d/17lOtuHum9VHdukfHr7143uCGydVZSaJNi2RhzGfh81g/edit?gid=1356715801#gid=1356715801')
+                        .then(res => {
+                            if (res.status === 'ok') {
+                                window.allStaffsData = Array.isArray(res.payload) ? res.payload : [];
+                                populateStaffsTable(window.allStaffsData); // Render the table with pre-loaded data
+                                console.log('[JS DEBUG] Staffs data pre-loaded and rendered.');
+                            } else {
+                                console.error('Failed to pre-load staffs data:', res.message);
+                            }
+                        })
+                        .catch(err => console.error('Error pre-loading staffs data:', err))
+                    );
+                }
+
+                // Pre-load Leaves data
+                if (typeof fetchAndPopulateLeaves === 'function') {
+                    adminPreloadTasks.push(fetchAndPopulateLeaves(new Date()) // fetchAndPopulateLeaves already fetches and renders
+                        .then(() => console.log('[JS DEBUG] Leaves data pre-loaded and rendered.'))
+                        .catch(err => console.error('Error pre-loading leaves data:', err))
+                    );
+                }
+
+                // Pre-load Stats data (for the logged-in admin's email)
+                if (typeof fetchAndRenderDashboard === 'function') {
+                    const adminEmail = currentUser['E-Mail'];
+                    const todayDate = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+                    if (adminEmail) {
+                        adminPreloadTasks.push(fetchAndRenderDashboard(adminEmail, todayDate) // fetchAndRenderDashboard already fetches and renders
+                            .then(() => console.log('[JS DEBUG] Stats data pre-loaded and rendered.'))
+                            .catch(err => console.error('Error pre-loading stats data:', err))
+                        );
+                    }
+                }
+
+                // Run all admin pre-load tasks in parallel
+                Promise.allSettled(adminPreloadTasks)
+                    .then(results => {
+                        const failed = results.filter(r => r.status === 'rejected');
+                        if (failed.length > 0) {
+                            console.warn('[JS DEBUG] Some admin pre-load tasks failed:', failed);
+                        } else {
+                            console.log('[JS DEBUG] All admin pre-load tasks completed.');
+                        }
+                    });
+            }
             });
     } else {
       // No allowed projects, show a message and hide work view

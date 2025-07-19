@@ -129,6 +129,7 @@ def get_monthly_summary_data(sheet_url, year, month):
             # สร้างข้อมูลรายวัน
             status_text = row.get('สถานะ', '')
             
+            
             # --- Helper to safely convert to int ---
             def safe_int(value):
                 try:
@@ -143,7 +144,9 @@ def get_monthly_summary_data(sheet_url, year, month):
             if 'ส่งครบ' in status_text:
                 day_info["status"] = "complete"
                 processed_data[name]["totalClips"] += clips_sent
-            elif 'ไม่ได้ส่ง' in status_text:
+            
+            # เพิ่มเช็ก "ขาดส่ง" ด้วยเผื่อชีตใช้คำนี้
+            elif 'ขาดส่ง' in status_text or 'ไม่ได้ส่ง' in status_text:
                 day_info["status"] = "missing"
                 processed_data[name]["totalMissing"] += safe_int(row.get('MissingDays', 0))
             elif 'ลา' in status_text:
